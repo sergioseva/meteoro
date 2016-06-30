@@ -6,7 +6,7 @@
 #include "EEPROMAnything.h"
 
 struct config_t
-{   byte default; 
+{   byte deflt; 
     int medicion;
     int minutos_logueo;
 } configuration;
@@ -24,9 +24,9 @@ void setup() {
     Serial.begin(9600);
    EEPROM_readAnything(0, configuration);
    
-	  if (configuration.default==255) {
+	  if (configuration.deflt==255) {
 		// es la primera vez
-		  configuration.default=0;
+		  configuration.deflt=0;
 		  configuration.medicion=0;
 		  configuration.minutos_logueo=10;
 		  EEPROM_writeAnything(0, configuration);
