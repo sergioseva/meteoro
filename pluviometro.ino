@@ -2,6 +2,15 @@
 #include <Wire.h>
 #include <LiquidCrystal.h>
 #include <RtcDS3231.h>
+#include <EEPROM.h>
+#include "EEPROMAnything.h"
+
+struct config_t
+{   byte default; 
+    int medicion;
+    int minutos_logueo;
+} configuration;
+
 
 RtcDS3231 Rtc;
 float medicion=0;
@@ -13,6 +22,15 @@ int anterior = 1;
 void setup() {
   // seteo reloj
     Serial.begin(9600);
+   EEPROM_readAnything(0, configuration);
+   
+	  if (configuration.default==255) {
+		// es la primera vez
+		  configuration.default=0;
+		  configuration.medicion=0;
+		  configuration.minutos_logueo=10;
+		  EEPROM_writeAnything(0, configuration);
+	  }
 
     seteoReloj();
 
@@ -29,6 +47,10 @@ void setup() {
 void loop() {
   // muestro la hora y temperatura
     
+    
+     // if they push the "Save" button, save their configuration
+    if (digitalRead(13) == HIGH)
+        EEPROM_writeAnything(0, configuration);
     mostrarHoraYTemp();
     leerMedicion();
  
