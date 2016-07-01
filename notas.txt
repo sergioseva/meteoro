@@ -1,0 +1,3 @@
+Menues en LCD
+http://www.coagula.org/content/pages/tutorial-manage-menu-and-lcd-display-arduino
+http://dimme.net/arduino-lcd-keypad-shield-clock-application/
