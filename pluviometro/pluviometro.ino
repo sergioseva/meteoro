@@ -82,17 +82,20 @@ void leerMedicion(){
     int valor_b = digitalRead(pin2);
     if(valor_b == 1) medicion=medicion+0.2;  // Si B = 1, aumentamos el contador
     else medicion=medicion-0.2;  // Si B = 0, reducimos el contador
-    escribir();  // Escribimos el valor en pantalla
+    escribir(true);  // Escribimos el valor en pantalla
   }
   anterior = actual;
 }
   
 
-void escribir()
+void escribir(boolean serial)
 {
   String s = String(medicion);  // Convertimos el número en texto
   //s.toCharArray(texto, 10);  // Convertimos el texto en un formato compatible
-  Serial.println(s + " " + unidades);
+  if (serial)
+    Serial.println(s + " " + unidades);
+  lcd.setCursor(2,0);
+  lcd.print(s + " " + unidades);
   
 }
 
@@ -165,7 +168,7 @@ void mostrarHoraYTemp(){
     }
 
     RtcDateTime now = Rtc.GetDateTime();
-    printDateTime(now);
+    printDateTime(now, true);
     Serial.println();
 
     RtcTemperature temp = Rtc.GetTemperature();
@@ -173,11 +176,8 @@ void mostrarHoraYTemp(){
     Serial.println("C");
   }
 
-void mostrarHoraYTempLCD(){
-  
-  }
 
-void printDateTime(const RtcDateTime& dt)
+void printDateTime(const RtcDateTime& dt, boolean serial)
 {
     char datestring[20];
 
@@ -190,5 +190,10 @@ void printDateTime(const RtcDateTime& dt)
             dt.Hour(),
             dt.Minute(),
             dt.Second() );
+    if (serial)
     Serial.print(datestring);
+    
+    lcd.clear();
+    lcd.setCursor(1,0);
+    lcd.print(datestring);
 }
