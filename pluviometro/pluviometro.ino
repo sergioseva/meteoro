@@ -18,7 +18,9 @@ String  unidades= "mm";
 int pin1 = 9;
 int pin2 = 8;
 int anterior = 1;
-  
+
+LiquidCrystal lcd(8,9,4,5,6,7); 
+
 void setup() {
   // seteo reloj
     Serial.begin(9600);
@@ -37,9 +39,13 @@ void setup() {
     // Inicializamos la lectura del encoder
     pinMode(pin1, INPUT);
     pinMode(pin2, INPUT);
+
  
-// Inicializamos las variables
+// Inicializamos las variables para mediciones
     anterior = 1;
+//pantalla
+    lcd.begin(16, 2);
+    lcd.clear();
 
 
 }
@@ -167,6 +173,9 @@ void mostrarHoraYTemp(){
     Serial.println("C");
   }
 
+void mostrarHoraYTempLCD(){
+  
+  }
 
 void printDateTime(const RtcDateTime& dt)
 {
