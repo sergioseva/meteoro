@@ -1,3 +1,5 @@
 Menues en LCD
 http://www.coagula.org/content/pages/tutorial-manage-menu-and-lcd-display-arduino
 http://dimme.net/arduino-lcd-keypad-shield-clock-application/
+sd en arduino mega
+http://forum.arduino.cc/index.php?topic=165170.0

@@ -14,7 +14,6 @@ struct config_t
 
 RtcDS3231 Rtc;
 RtcDateTime now;
-RtcTemperature temp
 float medicion=0;
 String  unidades= "mm";
 int pin1 = 9;
@@ -22,8 +21,12 @@ int pin2 = 8;
 int anterior = 1;
 
 LiquidCrystal lcd(8,9,4,5,6,7); 
+const int chipSelect = 53;
+//variables para el periodo de grabacion en la SD
+long intervalo;
+unsigned long previousMillis = 0;
 
-void setup() {
+7void setup() {
   // seteo reloj
    Serial.begin(9600);
    
@@ -32,19 +35,24 @@ void setup() {
    EEPROM_readAnything(0, configuration);
    
 	  if (configuration.deflt==255) {
-		// es la primera vez
+		// es la primera vez que se inicia el sistema
 		  configuration.deflt=0;
 		  configuration.medicion=0;
 		  configuration.minutos_logueo=10;
 		  EEPROM_writeAnything(0, configuration);
 	  }
+   else {
+    medicion=configuration.medicion;
+    }
+    //intervalo de grabacion en la micro sd en milisegundos
+    intervalo = configuration.minutos_logueo*60*1000;
 
     seteoReloj();
    //SD CARD
    Serial.print("Initializing SD card...");
    // make sure that the default chip select pin is set to
    // output, even if you don't use it:
-   pinMode(10, OUTPUT);
+   pinMode(chipSelect, OUTPUT);
   
   // see if the card is present and can be initialized:
    if (!SD.begin(chipSelect)) {
@@ -130,7 +138,7 @@ void mostrarDatos(boolean serial)
 {
 	
   //muestro fecha y hora
-  datestring=formatDateTime(now);
+  String datestring=formatDateTime(now);
   if (serial)
 	    Serial.print(datestring);
 	    
@@ -145,22 +153,28 @@ void mostrarDatos(boolean serial)
     Serial.println(s + " " + unidades);
   lcd.setCursor(2,0);
   lcd.print(s + " " + unidades);
-  
-  //escribo en la SD, aca hay que controlar que sea en el periodo fijado por el usuario
-  File dataFile = SD.open("datalog.txt", FILE_WRITE);
 
-  // if the file is available, write to it:
-  if (dataFile) {
-    dataFile.println(datestring + "," + s + " " + unidades);
-    dataFile.close();
+  unsigned long currentMillis = millis();
+  //valido que haya pasado el intervalo de escritura en la micro SD
+  if (currentMillis - previousMillis >= intervalo) {
+      previousMillis = currentMillis;
+      //escribo en la SD
+      File dataFile = SD.open("datalog.txt", FILE_WRITE);
     
-  }  
-  // if the file isn't open, pop up an error:
-  else {
-    Serial.println("error opening datalog.txt");
-  } 
-  
-  
+      // if the file is available, write to it:
+      if (dataFile) {
+        dataFile.println(datestring + "," + s + " " + unidades);
+        dataFile.close();
+        
+      }  
+      // if the file isn't open, pop up an error:
+      else {
+        Serial.println("error opening datalog.txt");
+      } 
+  }   
+  //escribimos en la eeprom para no perder el valor si el dispositivo se apaga
+  configuration.medicion=medicion;
+  EEPROM_writeAnything(0, configuration);
 }
 
 
@@ -199,7 +213,8 @@ void seteoReloj() {
     // Wire.begin(0, 2); // due to limited pins, use pin 0 and 2 for SDA, SCL
 
     RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
-    printDateTime(compiled);
+    String datestring=formatDateTime(compiled);
+    Serial.print(datestring);
     Serial.println();
 
     if (!Rtc.IsDateTimeValid()) 
