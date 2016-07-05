@@ -16,9 +16,8 @@ RtcDS3231 Rtc;
 RtcDateTime now;
 float medicion=0;
 String  unidades= "mm";
-int pin1 = 9;
-int pin2 = 8;
-int anterior = 1;
+
+
 
 LiquidCrystal lcd(8,9,4,5,6,7); 
 const int chipSelect = 53;
@@ -26,8 +25,28 @@ const int chipSelect = 53;
 long intervalo;
 unsigned long previousMillis = 0;
 
-7void setup() {
-  // seteo reloj
+//variables para el encoder
+const int PinCLK=2;                   // Used for generating interrupts using CLK signal
+const int PinDT=3;                    // Used for reading DT signal
+volatile float     virtualPosition  =0;  // must be volatile to work with the isr
+void isr0 ()  {
+  detachInterrupt(digitalPinToInterrupt(2));
+  static unsigned long                lastInterruptTime = 0;
+  unsigned long                       interruptTime = millis();
+  // If interrupts come faster than 5ms, assume it's a bounce and ignore
+  if (interruptTime - lastInterruptTime > 5) {
+      if (!digitalRead(PinDT))
+          virtualPosition=virtualPosition+0.2; 
+      else
+          virtualPosition=virtualPosition-0.2; 
+      }
+  lastInterruptTime = interruptTime;
+  attachInterrupt (digitalPinToInterrupt(2),isr0,RISING);
+} // ISR0
+
+
+void setup() {
+  
    Serial.begin(9600);
    
    
@@ -64,8 +83,9 @@ unsigned long previousMillis = 0;
   
 	
     // Inicializamos la lectura del encoder
-    pinMode(pin1, INPUT);
-    pinMode(pin2, INPUT);
+	attachInterrupt (digitalPinToInterrupt(2),isr0,RISING);
+    pinMode(PinCLK, INPUT);
+    pinMode(PinDT, INPUT);
 
  
 // Inicializamos las variables para mediciones
@@ -79,7 +99,8 @@ unsigned long previousMillis = 0;
 
 void loop() {
 	
-	String datestring;
+	
+     String datestring;
   // muestro la hora y temperatura
     
     
@@ -116,21 +137,9 @@ void leerHoraYTemp(){
 
 
 void leerMedicion(){
-  // Lectura de A, si es 0, volvemos a medir para asegurar el valor
-  int actual = digitalRead(pin1);
-  if(actual == 0) {
-    delay(10);
-    actual = digitalRead(pin1);
-  }
+	
+//Ya no hace falta, se hace en mostrar datos, las mediciones se leen en el ISR0
  
-  // Actuamos únicamente en el flanco descendente
-  if(anterior == 1 && actual == 0)
-  {
-    int valor_b = digitalRead(pin2);
-    if(valor_b == 1) medicion=medicion+0.2;  // Si B = 1, aumentamos el contador
-    else medicion=medicion-0.2;  // Si B = 0, reducimos el contador
-   }
-  anterior = actual;
 }
   
 
@@ -145,36 +154,38 @@ void mostrarDatos(boolean serial)
   lcd.clear();
   lcd.setCursor(1,0);
   lcd.print(datestring);
+  
+  
   //muestro la medicion     
+   if (virtualPosition != medicion) {
+        medicion = virtualPosition;
+		Serial.print("Count:");
+        Serial.println(medicion);
+		//cambio el valor de medicion, entonces escribo en la memoria
+		File dataFile = SD.open("datalog.txt", FILE_WRITE);
+    
+		// if the file is available, write to it:
+		if (dataFile) {
+			dataFile.println(datestring + "," + s + " " + unidades);
+			dataFile.close();
+        }  
+      // if the file isn't open, pop up an error:
+		else {
+			Serial.println("error opening datalog.txt");
+      }
+
+		//escribimos en la eeprom para no perder el valor si el dispositivo se apaga
+		configuration.medicion=medicion;
+		EEPROM_writeAnything(0, configuration);	  
+  }	
   
   String s = String(medicion);  // Convertimos el número en texto
   //s.toCharArray(texto, 10);  // Convertimos el texto en un formato compatible
   if (serial)
     Serial.println(s + " " + unidades);
-  lcd.setCursor(2,0);
-  lcd.print(s + " " + unidades);
-
-  unsigned long currentMillis = millis();
-  //valido que haya pasado el intervalo de escritura en la micro SD
-  if (currentMillis - previousMillis >= intervalo) {
-      previousMillis = currentMillis;
-      //escribo en la SD
-      File dataFile = SD.open("datalog.txt", FILE_WRITE);
-    
-      // if the file is available, write to it:
-      if (dataFile) {
-        dataFile.println(datestring + "," + s + " " + unidades);
-        dataFile.close();
-        
-      }  
-      // if the file isn't open, pop up an error:
-      else {
-        Serial.println("error opening datalog.txt");
-      } 
-  }   
-  //escribimos en la eeprom para no perder el valor si el dispositivo se apaga
-  configuration.medicion=medicion;
-  EEPROM_writeAnything(0, configuration);
+  lcd.setCursor(5,1);
+  lcd.print(s + " " + unidades);  
+  
 }
 
 
