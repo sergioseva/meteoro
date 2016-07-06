@@ -285,9 +285,9 @@ void initSDcard(){
      Serial.println("Card failed, or not present");
      // don't do anything more:
      lcd.setCursor(14,1);
-     lcd.print("  ");
+     lcd.print("SD");
    } else
    Serial.println("card initialized.");
      lcd.setCursor(14,1);
-     lcd.print("SD");
+     lcd.print("  ");
   }
