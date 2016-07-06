@@ -26,22 +26,32 @@ long intervalo;
 unsigned long previousMillis = 0;
 
 //variables para el encoder
-const int PinCLK=2;                   // Used for generating interrupts using CLK signal
-const int PinDT=3;                    // Used for reading DT signal
+const int PinCLK=18;                   // Used for generating interrupts using CLK signal
+const int PinDT=19;                    // Used for reading DT signal
 volatile float     virtualPosition  =0;  // must be volatile to work with the isr
 void isr0 ()  {
-  detachInterrupt(digitalPinToInterrupt(2));
+  detachInterrupt(digitalPinToInterrupt(PinCLK));
+  int valCLK;
+  int valDT;
   static unsigned long                lastInterruptTime = 0;
   unsigned long                       interruptTime = millis();
   // If interrupts come faster than 5ms, assume it's a bounce and ignore
   if (interruptTime - lastInterruptTime > 5) {
-      if (!digitalRead(PinDT))
-          virtualPosition=virtualPosition+0.2; 
-      else
+      valCLK=digitalRead(PinCLK);
+      valDT=digitalRead(PinDT);
+      if ( (valDT && valCLK) || (!valDT && !valCLK) )
           virtualPosition=virtualPosition-0.2; 
+      else if ( (!valDT && valCLK) || (valDT && !valCLK) )
+          virtualPosition=virtualPosition+0.2; 
       }
+//  Serial.print(valCLK);
+//  Serial.print(valDT);
+//  Serial.println();
+//  Serial.print(virtualPosition);
+//  Serial.println();  
   lastInterruptTime = interruptTime;
-  attachInterrupt (digitalPinToInterrupt(2),isr0,RISING);
+  attachInterrupt (digitalPinToInterrupt(PinCLK),isr0,CHANGE);
+  
 } // ISR0
 
 
@@ -67,29 +77,16 @@ void setup() {
     intervalo = configuration.minutos_logueo*60*1000;
 
     seteoReloj();
-   //SD CARD
-   Serial.print("Initializing SD card...");
-   // make sure that the default chip select pin is set to
-   // output, even if you don't use it:
-   pinMode(chipSelect, OUTPUT);
-  
-  // see if the card is present and can be initialized:
-   if (!SD.begin(chipSelect)) {
-     Serial.println("Card failed, or not present");
-     // don't do anything more:
-     
-   } else
-   Serial.println("card initialized.");
+    initSDcard();
   
 	
     // Inicializamos la lectura del encoder
-	attachInterrupt (digitalPinToInterrupt(2),isr0,RISING);
+	attachInterrupt (digitalPinToInterrupt(PinCLK),isr0,CHANGE);
     pinMode(PinCLK, INPUT);
     pinMode(PinDT, INPUT);
 
  
-// Inicializamos las variables para mediciones
-    anterior = 1;
+
 //pantalla
     lcd.begin(16, 2);
     lcd.clear();
@@ -113,7 +110,7 @@ void loop() {
     leerMedicion();
     mostrarDatos(true);  // Escribimos el valor en pantalla
     
-    delay(10000); // ten seconds
+    //delay(10000); // ten seconds
 
 }
 
@@ -148,11 +145,11 @@ void mostrarDatos(boolean serial)
 	
   //muestro fecha y hora
   String datestring=formatDateTime(now);
-  if (serial)
-	    Serial.print(datestring);
+  //if (serial)
+	   // Serial.print(datestring);
 	    
-  lcd.clear();
-  lcd.setCursor(1,0);
+  //lcd.clear();
+  lcd.setCursor(0,0);
   lcd.print(datestring);
   
   
@@ -161,17 +158,28 @@ void mostrarDatos(boolean serial)
         medicion = virtualPosition;
 		Serial.print("Count:");
         Serial.println(medicion);
+
+    String s = String(medicion);  // Convertimos el número en texto
+    //s.toCharArray(texto, 10);  // Convertimos el texto en un formato compatible
+    // if (serial)
+    //   Serial.println(s + " " + unidades);
+    lcd.setCursor(5,1);
+    lcd.print(s + " " + unidades);
+  
 		//cambio el valor de medicion, entonces escribo en la memoria
 		File dataFile = SD.open("datalog.txt", FILE_WRITE);
     
 		// if the file is available, write to it:
 		if (dataFile) {
+      lcd.setCursor(14,1);
+      lcd.print("  ");
 			dataFile.println(datestring + "," + s + " " + unidades);
 			dataFile.close();
         }  
       // if the file isn't open, pop up an error:
 		else {
-			Serial.println("error opening datalog.txt");
+			Serial.println("error opening datalog.txt trying to init sd card");
+      initSDcard();
       }
 
 		//escribimos en la eeprom para no perder el valor si el dispositivo se apaga
@@ -179,12 +187,7 @@ void mostrarDatos(boolean serial)
 		EEPROM_writeAnything(0, configuration);	  
   }	
   
-  String s = String(medicion);  // Convertimos el número en texto
-  //s.toCharArray(texto, 10);  // Convertimos el texto en un formato compatible
-  if (serial)
-    Serial.println(s + " " + unidades);
-  lcd.setCursor(5,1);
-  lcd.print(s + " " + unidades);  
+    
   
 }
 
@@ -198,8 +201,8 @@ String formatDateTime(const RtcDateTime& dt)
     snprintf_P(datestring, 
             countof(datestring),
             PSTR("%02u/%02u/%04u %02u:%02u:%02u"),
-            dt.Month(),
             dt.Day(),
+            dt.Month(),
             dt.Year(),
             dt.Hour(),
             dt.Minute(),
@@ -270,3 +273,21 @@ void seteoReloj() {
     Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone); 
   }
 
+void initSDcard(){
+    //SD CARD
+   Serial.print("Initializing SD card...");
+   // make sure that the default chip select pin is set to
+   // output, even if you don't use it:
+   pinMode(chipSelect, OUTPUT);
+  
+  // see if the card is present and can be initialized:
+   if (!SD.begin(chipSelect)) {
+     Serial.println("Card failed, or not present");
+     // don't do anything more:
+     lcd.setCursor(14,1);
+     lcd.print("  ");
+   } else
+   Serial.println("card initialized.");
+     lcd.setCursor(14,1);
+     lcd.print("SD");
+  }
