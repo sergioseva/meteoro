@@ -56,12 +56,16 @@ void isr0 ()  {
 
 
 void setup() {
-  
+   
    Serial.begin(9600);
    
    
    Wire.begin();
-   EEPROM_readAnything(0, configuration);
+   int count=EEPROM_readAnything(0, configuration);
+   Serial.println(count);
+   Serial.println(configuration.deflt);
+   Serial.println(configuration.medicion);
+   Serial.println(configuration.minutos_logueo);
    
 	  if (configuration.deflt==255) {
 		// es la primera vez que se inicia el sistema
