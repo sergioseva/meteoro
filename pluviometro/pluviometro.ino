@@ -7,7 +7,7 @@
 
 struct config_t
 {   byte deflt; 
-    int medicion;
+    float medicion;
     int minutos_logueo;
 } configuration;
 
@@ -188,7 +188,12 @@ void mostrarDatos(boolean serial)
 
 		//escribimos en la eeprom para no perder el valor si el dispositivo se apaga
 		configuration.medicion=medicion;
-		EEPROM_writeAnything(0, configuration);	  
+		int c=EEPROM_writeAnything(0, configuration);
+   	Serial.print("escribi medicion "); 
+    Serial.print(configuration.medicion) ;
+    Serial.print(" cantidad "); 
+    Serial.print(c); 
+    Serial.println();
   }	
   
     
