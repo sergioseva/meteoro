@@ -15,12 +15,13 @@ struct config_t
 RtcDS3231 Rtc;
 RtcDateTime now;
 float medicion=0;
-String  unidades= "mm";
+String  unidades= "cm";
 
 
 
 LiquidCrystal lcd(8,9,4,5,6,7); 
 const int chipSelect = 53;
+
 //variables para el periodo de grabacion en la SD
 long intervalo;
 unsigned long previousMillis = 0;
@@ -29,6 +30,7 @@ unsigned long previousMillis = 0;
 const int PinCLK=18;                   // Used for generating interrupts using CLK signal
 const int PinDT=19;                    // Used for reading DT signal
 volatile float     virtualPosition  =0;  // must be volatile to work with the isr
+const float incremento=0.31; //  1/32
 void isr0 ()  {
   detachInterrupt(digitalPinToInterrupt(PinCLK));
   int valCLK;
@@ -37,20 +39,20 @@ void isr0 ()  {
   unsigned long                       interruptTime = millis();
   // If interrupts come faster than 5ms, assume it's a bounce and ignore
   if (interruptTime - lastInterruptTime > 5) {
-      valCLK=digitalRead(PinCLK);
       valDT=digitalRead(PinDT);
-      if ( (valDT && valCLK) || (!valDT && !valCLK) )
-          virtualPosition=virtualPosition-0.2; 
-      else if ( (!valDT && valCLK) || (valDT && !valCLK) )
-          virtualPosition=virtualPosition+0.2; 
+      if (  !valDT )
+          virtualPosition=virtualPosition-incremento; 
+      else if ( valDT )
+          virtualPosition=virtualPosition+incremento; 
       }
-//  Serial.print(valCLK);
-//  Serial.print(valDT);
+
+  Serial.print(valCLK);
+  Serial.println(valDT);
 //  Serial.println();
-//  Serial.print(virtualPosition);
+//  Serial.println(virtualPosition);
 //  Serial.println();  
   lastInterruptTime = interruptTime;
-  attachInterrupt (digitalPinToInterrupt(PinCLK),isr0,CHANGE);
+  attachInterrupt (digitalPinToInterrupt(PinCLK),isr0,FALLING);
   
 } // ISR0
 
@@ -75,7 +77,11 @@ void setup() {
 		  EEPROM_writeAnything(0, configuration);
 	  }
    else {
+    
     medicion=configuration.medicion;
+    virtualPosition=medicion;
+    Serial.print("medicion en setup:");
+    Serial.println(medicion);
     }
     //intervalo de grabacion en la micro sd en milisegundos
     intervalo = configuration.minutos_logueo*60*1000;
@@ -85,7 +91,7 @@ void setup() {
   
 	
     // Inicializamos la lectura del encoder
-	attachInterrupt (digitalPinToInterrupt(PinCLK),isr0,CHANGE);
+	attachInterrupt (digitalPinToInterrupt(PinCLK),isr0,FALLING);
     pinMode(PinCLK, INPUT);
     pinMode(PinDT, INPUT);
 
@@ -153,9 +159,11 @@ void mostrarDatos(boolean serial)
 	   // Serial.print(datestring);
 	    
   //lcd.clear();
+  String s = String(medicion);
   lcd.setCursor(0,0);
   lcd.print(datestring);
-  
+  lcd.setCursor(5,1);
+  lcd.print(s + " " + unidades);
   
   //muestro la medicion     
    if (virtualPosition != medicion) {
@@ -163,12 +171,12 @@ void mostrarDatos(boolean serial)
 		Serial.print("Count:");
         Serial.println(medicion);
 
-    String s = String(medicion);  // Convertimos el número en texto
+    // s = String(medicion);  // Convertimos el número en texto
     //s.toCharArray(texto, 10);  // Convertimos el texto en un formato compatible
     // if (serial)
     //   Serial.println(s + " " + unidades);
-    lcd.setCursor(5,1);
-    lcd.print(s + " " + unidades);
+    //lcd.setCursor(5,1);
+    //lcd.print(s + " " + unidades);
   
 		//cambio el valor de medicion, entonces escribo en la memoria
 		File dataFile = SD.open("datalog.txt", FILE_WRITE);
