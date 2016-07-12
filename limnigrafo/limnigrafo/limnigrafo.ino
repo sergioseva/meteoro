@@ -1,6 +1,7 @@
+#include <LiquidCrystal.h>
+#include <LCDKeypad.h>
 #include <SD.h>
 #include <Wire.h>
-#include <LiquidCrystal.h>
 #include <RtcDS3231.h>
 #include <EEPROM.h>
 #include "EEPROMAnything.h"
@@ -18,8 +19,8 @@ float medicion=0;
 String  unidades= "cm";
 
 
-
-LiquidCrystal lcd(8,9,4,5,6,7); 
+LCDKeypad lcd;
+//LiquidCrystal lcd(8,9,4,5,6,7); 
 const int chipSelect = 53;
 
 //variables para el periodo de grabacion en la SD
@@ -27,34 +28,46 @@ long intervalo;
 unsigned long previousMillis = 0;
 
 //variables para el encoder
-const int PinCLK=18;                   // Used for generating interrupts using CLK signal
-const int PinDT=19;                    // Used for reading DT signal
+const int encoderPinA=18;                   // Used for generating interrupts using CLK signal
+const int encoderPinB=19;                    // Used for reading DT signal
 volatile float     virtualPosition  =0;  // must be volatile to work with the isr
 const float incremento=0.31; //  1/32
-void isr0 ()  {
-  detachInterrupt(digitalPinToInterrupt(PinCLK));
-  int valCLK;
-  int valDT;
-  static unsigned long                lastInterruptTime = 0;
-  unsigned long                       interruptTime = millis();
-  // If interrupts come faster than 5ms, assume it's a bounce and ignore
-  if (interruptTime - lastInterruptTime > 5) {
-      valDT=digitalRead(PinDT);
-      if (  !valDT )
-          virtualPosition=virtualPosition-incremento; 
-      else if ( valDT )
-          virtualPosition=virtualPosition+incremento; 
-      }
 
-  Serial.print(valCLK);
-  Serial.println(valDT);
-//  Serial.println();
-//  Serial.println(virtualPosition);
-//  Serial.println();  
-  lastInterruptTime = interruptTime;
-  attachInterrupt (digitalPinToInterrupt(PinCLK),isr0,FALLING);
-  
-} // ISR0
+
+// interrupt service routine vars
+boolean A_set = false;              
+boolean B_set = false;
+static boolean rotating=false;  
+
+// Interrupt on A changing state
+void doEncoderA(){
+  // debounce
+  if ( rotating ) delay (1);  // wait a little until the bouncing is done
+
+  // Test transition, did things really change? 
+  if( digitalRead(encoderPinA) != A_set ) {  // debounce once more
+    A_set = !A_set;
+
+    // adjust counter + if A leads B
+    if ( A_set && !B_set ) 
+      virtualPosition += incremento;
+
+    rotating = false;  // no more debouncing until loop() hits again
+  }
+}
+
+// Interrupt on B changing state, same as A above
+void doEncoderB(){
+  if ( rotating ) delay (1);
+  if( digitalRead(encoderPinB) != B_set ) {
+    B_set = !B_set;
+    //  adjust counter - 1 if B leads A
+    if( B_set && !A_set ) 
+      virtualPosition -= incremento;
+
+    rotating = false;
+  }
+}
 
 
 void setup() {
@@ -89,11 +102,21 @@ void setup() {
     seteoReloj();
     initSDcard();
   
-	
-    // Inicializamos la lectura del encoder
-	attachInterrupt (digitalPinToInterrupt(PinCLK),isr0,FALLING);
-    pinMode(PinCLK, INPUT);
-    pinMode(PinDT, INPUT);
+
+   pinMode(encoderPinA, INPUT); 
+  pinMode(encoderPinB, INPUT); 
+
+ // turn on pullup resistors
+  digitalWrite(encoderPinA, HIGH);
+  digitalWrite(encoderPinB, HIGH);
+
+
+// encoder pin on interrupt 0 (pin 2)
+  attachInterrupt(digitalPinToInterrupt(encoderPinA), doEncoderA, CHANGE);
+// encoder pin on interrupt 1 (pin 3)
+  attachInterrupt(digitalPinToInterrupt(encoderPinB), doEncoderB, CHANGE);
+
+
 
  
 
@@ -106,7 +129,7 @@ void setup() {
 
 void loop() {
 	
-	
+	   rotating = true;  // reset the debouncer
      String datestring;
   // muestro la hora y temperatura
     

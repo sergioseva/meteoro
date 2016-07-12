@@ -34,50 +34,50 @@ long intervalo;
 unsigned long previousMillis = 0;
 
 //variables para el encoder
-const int PinCLK=18;                   // Used for generating interrupts using CLK signal
-const int PinDT=19;                    // Used for reading DT signal
+const int encoderPinA=18;                   // Used for generating interrupts using CLK signal
+const int encoderPinB=19;                    // Used for reading DT signal
 volatile float     virtualPosition  =0;  // must be volatile to work with the isr
 
 const float incremento=0.2;
-void isr0 ()  {
-  detachInterrupt(digitalPinToInterrupt(PinCLK));
-  static unsigned long                lastInterruptTime = 0;
-  unsigned long                       interruptTime = millis();
-  // If interrupts come faster than 5ms, assume it's a bounce and ignore
-  if (interruptTime - lastInterruptTime > 5) {
-           Serial.println("interrupcion A valida");
-          virtualPosition=virtualPosition+incremento; 
-      }
-    //Serial.println("interrupcion A");
-//  Serial.print(valCLK);
-//  Serial.print(valDT);
-//  Serial.println();
-//  Serial.print(virtualPosition);
-//  Serial.println();  
-  lastInterruptTime = interruptTime;
-  attachInterrupt (digitalPinToInterrupt(PinCLK),isr0,RISING);
-  
-} // ISR0
+// interrupt service routine vars
+boolean A_set = false;              
+boolean B_set = false;
+static boolean rotating=false;  
 
-void isr1 ()  {
-  detachInterrupt(digitalPinToInterrupt(PinDT));
-  static unsigned long                lastInterruptTime = 0;
-  unsigned long                       interruptTime = millis();
-  // If interrupts come faster than 5ms, assume it's a bounce and ignore
-  if (interruptTime - lastInterruptTime > 5) {
-          Serial.println("interrupcion B valida");
-          virtualPosition=virtualPosition+incremento; 
-      }
- // Serial.println("interrupcion B");
-//  Serial.print(valCLK);
-//  Serial.print(valDT);
-//  Serial.println();
-//  Serial.print(virtualPosition);
-//  Serial.println();  
-  lastInterruptTime = interruptTime;
-  attachInterrupt (digitalPinToInterrupt(PinDT),isr1,RISING);
-  
-} // ISR1
+// Interrupt on A changing state
+void doEncoderA(){
+  // debounce
+  if ( rotating ) delay (1);  // wait a little until the bouncing is done
+
+  // Test transition, did things really RISING? 
+  if( digitalRead(encoderPinA) &&  !A_set ) {  // debounce once more
+    A_set = 1;
+    Serial.println("A");
+    Serial.println(A_set);
+    // adjust counter + if A leads B
+    B_set=digitalRead(encoderPinB);
+    if ( A_set && !B_set ) 
+      virtualPosition += incremento;
+
+    rotating = false;  // no more debouncing until loop() hits again
+  }
+}
+
+// Interrupt on B changing state, same as A above
+void doEncoderB(){
+  if ( rotating ) delay (1);
+  if( digitalRead(encoderPinB) &&  !B_set ) {
+    B_set = 1;
+    Serial.println("B");
+    Serial.println(B_set);
+    //  adjust counter - 1 if B leads A
+     A_set=digitalRead(encoderPinA);
+    if( B_set && !A_set ) 
+      virtualPosition += incremento;
+
+    rotating = false;
+  }
+}
 
 
 void setup() {
@@ -113,11 +113,19 @@ void setup() {
     initSDcard();
   
 	
-    // Inicializamos la lectura del encoder
-	attachInterrupt (digitalPinToInterrupt(PinCLK),isr0,RISING);
-  attachInterrupt (digitalPinToInterrupt(PinDT),isr1,RISING);
-    pinMode(PinCLK, INPUT);
-    pinMode(PinDT, INPUT);
+  pinMode(encoderPinA, INPUT); 
+  pinMode(encoderPinB, INPUT); 
+
+ // turn on pullup resistors
+  digitalWrite(encoderPinA, LOW);
+  digitalWrite(encoderPinB, LOW);
+
+
+// encoder pin on interrupt 0 (pin 2)
+  attachInterrupt(digitalPinToInterrupt(encoderPinA), doEncoderA, RISING);
+// encoder pin on interrupt 1 (pin 3)
+  attachInterrupt(digitalPinToInterrupt(encoderPinB), doEncoderB, RISING);
+
 
  
 
@@ -130,7 +138,7 @@ void setup() {
 
 void loop() {
 	
-	
+	   rotating = true;  // reset the debouncer
      String datestring;
   // muestro la hora y temperatura
     
