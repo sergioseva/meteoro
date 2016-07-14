@@ -71,15 +71,24 @@ void menuUsed(MenuUseEvent used){
   lcd.setCursor(0,0);  
  if (used.item.getName()=="Salir           "){
     lcd.print("Sali");
-  } else if  (used.item.getName()=="Cambiar Hora    "){
+  } else if  (used.item.getName().indexof("Cambiar Hora")!=-1){
     setearHora();
-  }  else if  (used.item.getName()=="Cambiar Fecha   "){
+  }  else if  (used.item.getName().indexof("Cambiar Fecha")!=-1){
     Serial.println("Cambiar fecha");
     setearFecha();
-  } 
-
+  } else if  (used.item.getName().indexof("Reset Dia")!=-1){
+    Serial.println("Reset Dia");
+    resetAcumuladoDiario();
+  }  else if  (used.item.getName().indexof("Reset Mes")!=-1){
+    Serial.println("Reset Mes");
+    resetAcumuladoMensual();
+  }
+  else if (used.item.getName().indexof("Reset Total")!=-1){
+    Serial.println("Reset Todo");
+    resetAcumuladoTodo();
+  }
   
-  exitmenu=true;
+  //exitmenu=true;
 //  menu.toRoot();  //back to Main
 }
 
