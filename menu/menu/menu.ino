@@ -29,7 +29,7 @@ IMPORTANT: to use the menubackend library by Alexander Brevig download it at htt
 #include <RtcDS3231.h>
 
 
-int lastButtonPushed = 0;
+
 
 #define HOURS 0
 #define MINUTES 1
@@ -78,13 +78,25 @@ void menuUsed(MenuUseEvent used){
     setearFecha();
   } else if  (smenu.indexOf("Reset Dia")!=-1){
     Serial.println("Reset Dia");
+	confirmar("Confirma r. dia?",resetAcumuladoDiario,"Acum diario", "es 0");
 //    resetAcumuladoDiario();
   }  else if  (smenu.indexOf("Reset Mes")!=-1){
     Serial.println("Reset Mes");
+	confirmar("Confirma r. mes?",resetAcumuladoMensual,"Acum mensual", "es 0");
   //  resetAcumuladoMensual();
   }
   else if (smenu.indexOf("Reset Total")!=-1){
     Serial.println("Reset Todo");
+	confirmar("Confirma r. t?",resetAcumuladoTodo,"Acum diario", "y mensual son 0");
+  //  resetAcumuladoTodo();
+  } else if  (smenu.indexOf("Expulsar")!=-1){
+    Serial.println("Expulsar");
+	expulsarMemoria();	
+  //  resetAcumuladoMensual();
+  }
+  else if (smenu.indexOf("Insertar")!=-1){
+    Serial.println("Insertar");
+	insertarMemoria();	
   //  resetAcumuladoTodo();
   }
 
@@ -107,7 +119,11 @@ MenuBackend menu = MenuBackend(menuUsed,menuChanged);
     MenuItem menuItem3SubItem2 = MenuItem("Reset Mes       ");
     MenuItem menuItem3SubItem3 = MenuItem("Reset Total     ");
     MenuItem menuItem3SubItem4 = MenuItem("Subir           ");
-    MenuItem menu1Item4 = MenuItem("Salir           ");
+	MenuItem menu1Item4 = MenuItem("Memoria...        ");
+    MenuItem menuItem4SubItem1 = MenuItem("Expulsar        ");
+    MenuItem menuItem4SubItem2 = MenuItem("Insertar       ");
+    MenuItem menuItem4SubItem3 = MenuItem("Subir           ");
+    MenuItem menu1Item5 = MenuItem("Salir           ");
 
 
 
@@ -137,9 +153,11 @@ void setup()
     
   //configure menu
   menu.getRoot().add(menu1Item1);
-  menu1Item1.addRight(menu1Item2).addRight(menu1Item3).addRight(menu1Item4);
+  menu1Item1.addRight(menu1Item2).addRight(menu1Item3).addRight(menu1Item4).addRight(menu1Item5);
   menu1Item3.addAfter(menuItem3SubItem4);//para que al elegir subir vaya al submenu
   menu1Item3.add(menuItem3SubItem1).addRight(menuItem3SubItem2).addRight(menuItem3SubItem3).addRight(menuItem3SubItem4);
+  menu1Item4.addAfter(menuItem4SubItem3);//para que al elegir subir vaya al submenu
+  menu1Item4.add(menuItem4SubItem1).addRight(menuItem4SubItem2).addRight(menuItem4SubItem3);
   
   menu.toRoot();
   lcd.setCursor(0,0);  
@@ -158,30 +176,27 @@ void loop()
   lcd.print("                ");
 
 
-buttonPressed=lcd.button();
-if (buttonPressed==KEYPAD_SELECT){
-  waitReleaseButton();
-  lcd.setCursor(0,0);  
-  lcd.print("Menu            ");
-  exitmenu=false;
-  menu.toRoot();
-  menu.moveDown();
-  while  (!exitmenu){
-      
-      do
-      {
-        
-      buttonPressed=waitButton();
-        
-      } while(!(buttonPressed==KEYPAD_SELECT || buttonPressed==KEYPAD_LEFT || buttonPressed==KEYPAD_RIGHT) && !exitmenu);
-      if (!exitmenu) {
-      waitReleaseButton();
-     
-      lastButtonPushed=buttonPressed;
-      navigateMenus();  //in some situations I want to use the button for other purpose (eg. to change some settings)
-      }
-  //buttonPressed=lcd.button();  //I splitted button reading and navigation in two procedures because 
-  }
+  buttonPressed=lcd.button();
+  if (buttonPressed==KEYPAD_SELECT){
+	  waitReleaseButton();
+	  lcd.setCursor(0,0);  
+	  lcd.print("Menu            ");
+	  exitmenu=false;
+	  menu.toRoot();
+	  menu.moveDown();
+	  while  (!exitmenu){
+		  
+		  while(!(buttonPressed==KEYPAD_SELECT || buttonPressed==KEYPAD_LEFT || buttonPressed==KEYPAD_RIGHT) && !exitmenu)
+		  {			
+			buttonPressed=waitButton();			
+		  } 
+		  if (!exitmenu) {
+			waitReleaseButton();
+			navigateMenus(buttonPressed);  //in some situations I want to use the button for other purpose (eg. to change some settings)
+		  }
+	  //buttonPressed=lcd.button();  //I splitted button reading and navigation in two procedures because 
+	  }
+	buttonPressed=KEYPAD_NONE;  
   
 }
 
@@ -224,11 +239,11 @@ int waitButton()
 
 
 
-void navigateMenus() {
+void navigateMenus(int b) {
   MenuItem currentMenu=menu.getCurrent();
   Serial.print("button:");
-  Serial.println(lastButtonPushed);
-  switch (lastButtonPushed){
+  Serial.println(b);
+  switch (navigateMenus){
     case KEYPAD_SELECT:
       if(!(currentMenu.moveDown() || currentMenu.getName()=="Subir           ")){  //if the current menu has a child and has been pressed enter then menu navigate to item below
         menu.use();
@@ -250,7 +265,7 @@ void navigateMenus() {
       break;      
   }
   
-  lastButtonPushed=-1; //reset the lastButtonPushed variable
+
 }
 
 void setearHora (){
@@ -305,6 +320,30 @@ boolean waitReleaseButton(int lastButtonPressed,bool (*funcion_procesar_boton)(i
   } while(b!=KEYPAD_NONE && !salir);
   return salir;
   
+}
+
+void confirmar(String texto,void (*funcion_si)(),String conf1="",String conf2=""){
+int buttonPressed;
+lcd.setCursor(0,0);
+lcd.print(texto);
+lcd.setCursor(0,1);
+lcd.print("up si   down no");
+	  do
+      {
+			buttonPressed=waitButton();
+      } while(!(buttonPressed==KEYPAD_UP || buttonPressed==KEYPAD_DOWN) && !exitmenu);
+      
+	  if (!exitmenu) {
+		  waitReleaseButton();
+		  if (buttonPressed==KEYPAD_UP) {
+			funcion_si();
+			lcd.setCursor(0,0);
+			lcd.print(conf1);
+			lcd.setCursor(0,1);
+			lcd.print(conf2);
+		  }		  
+		}
+exitmenu=false;	  
 }
 
 boolean buttonProcessTime(int b) {
