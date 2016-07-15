@@ -17,6 +17,8 @@ struct config_t
 	float acumulado_dia;
 	int mes_actual;
 	int dia_actual;
+	bool memoria;
+	
 } configuration;
 
 
@@ -42,6 +44,7 @@ const float incremento=0.2;
 boolean A_set = false;              
 boolean B_set = false;
 static boolean rotating=false;  
+bool error_memoria=false;
 
 // Interrupt on A changing state
 void doEncoderA(){
@@ -105,6 +108,7 @@ void setup() {
 			  configuration.deflt=0;
 			  configuration.medicion=0;
 			  configuration.minutos_logueo=10;
+			  configuration.memoria=true;
 			  EEPROM_writeAnything(0, configuration);
 	  }
    else {
@@ -188,6 +192,14 @@ resetAcumuladoDiario();
 resetAcumuladoMensual();
 }
   
+void insertarMemoria() {
+configuration.memoria=true;
+initSDcard();
+}
+
+void expulsarMemoria() {
+configuration.memoria=false;
+}
 
 void mostrarDatos(boolean serial)
 {
@@ -199,6 +211,19 @@ void mostrarDatos(boolean serial)
 	    
   //lcd.clear();
   String s;
+  
+  
+  if (configuration.memoria && !error_memoria ) {
+				  lcd.setCursor(15,0);
+				  lcd.print("M");
+  } else if (configuration.memoria && error_memoria )
+  {
+				  lcd.setCursor(15,0);
+				  lcd.print("E");
+  } else if (!configuration.memoria){
+				  lcd.setCursor(15,0);
+				  lcd.print(" ");
+  }
   
   //muestro la medicion     
    if (virtualPosition != medicion) {
@@ -217,14 +242,13 @@ void mostrarDatos(boolean serial)
     Serial.print("Medicion entera:");
         Serial.println(med_int);
      //tuve que hacer la comparacion convirtiendo a string porque no daba igual aunque sea 2.00=2
-		if (String(medicion)==String(med_int)+".00") {
+		if ((String(medicion)==String(med_int)+".00") and configuration.memoria) {
 			//cambio el valor de medicion, entonces escribo en la memoria
 			File dataFile = SD.open("datalog.txt", FILE_WRITE);
 		  Serial.print("Escribo en SD");  
 			// if the file is available, write to it:
 			if (dataFile) {
-				  lcd.setCursor(14,1);
-				  lcd.print("  ");
+			      error_memoria=false;
 				  s = String(medicion);
 				  dataFile.println(datestring + "," + s + " " + unidades);
 				  dataFile.close();
@@ -268,13 +292,12 @@ String formatDateTime(const RtcDateTime& dt)
 
     snprintf_P(datestring, 
             countof(datestring),
-            PSTR("%02u/%02u/%04u %02u:%02u:%02u"),
+            PSTR("%02u/%02u/%02u %02u:%02u"),
             dt.Day(),
             dt.Month(),
             dt.Year(),
             dt.Hour(),
-            dt.Minute(),
-            dt.Second() );
+            dt.Minute() );
    
     return datestring;
 }
@@ -351,12 +374,8 @@ void initSDcard(){
   // see if the card is present and can be initialized:
    if (!SD.begin(chipSelect)) {
      Serial.println("Card failed, or not present");
-     // don't do anything more:
-     lcd.setCursor(14,1);
-     lcd.print("SD");
+     error_memoria=true;
    } else
    Serial.println("card initialized.");
-     lcd.setCursor(14,1);
-     lcd.print("  ");
+   error_memoria=false;     
   }
-
