@@ -69,11 +69,11 @@ void menuUsed(MenuUseEvent used){
   lcd.setCursor(0,1); 
   lcd.print("                ");
   lcd.setCursor(0,0);  
- if (smenu.indexOf("Salir ")!=-1){
+  if (smenu.indexOf("Salir ")!=-1){
     lcd.print("Sali");  
   } else if  (smenu.indexOf("Cambiar Hora")!=-1){
     setearHora();
-  }  else if  (smenu.indexOf("Cambiar Fecha")!=-1){
+    }  else if  (smenu.indexOf("Cambiar Fecha")!=-1){
     Serial.println("Cambiar fecha");
     setearFecha();
   } else if  (smenu.indexOf("Reset Dia")!=-1){
@@ -81,13 +81,17 @@ void menuUsed(MenuUseEvent used){
 //    resetAcumuladoDiario();
   }  else if  (smenu.indexOf("Reset Mes")!=-1){
     Serial.println("Reset Mes");
-//    resetAcumuladoMensual();
+  //  resetAcumuladoMensual();
   }
   else if (smenu.indexOf("Reset Total")!=-1){
     Serial.println("Reset Todo");
-//    resetAcumuladoTodo();
+  //  resetAcumuladoTodo();
   }
-  
+
+  lcd.setCursor(0,0);  
+  lcd.print("Menu            ");
+  lcd.setCursor(0,1);
+  lcd.print(smenu);
   //exitmenu=true;
 //  menu.toRoot();  //back to Main
 }
@@ -167,7 +171,7 @@ if (buttonPressed==KEYPAD_SELECT){
       do
       {
         
-        buttonPressed=waitButton();
+      buttonPressed=waitButton();
         
       } while(!(buttonPressed==KEYPAD_SELECT || buttonPressed==KEYPAD_LEFT || buttonPressed==KEYPAD_RIGHT) && !exitmenu);
       if (!exitmenu) {
@@ -197,10 +201,10 @@ void waitReleaseButton()
 }
 
 
+
 int waitButton()
 {
   int buttonPressed; 
-  waitReleaseButton;
   unsigned long starting=millis();
   unsigned long current;
   while((buttonPressed=lcd.button())==KEYPAD_NONE)
@@ -219,14 +223,6 @@ int waitButton()
 
 
 
-
-void  readButtons(){  //read buttons status
- 
-
-  int buttonPressed=lcd.button();
- 
-                 
-}
 
 void navigateMenus() {
   MenuItem currentMenu=menu.getCurrent();
@@ -258,9 +254,10 @@ void navigateMenus() {
 }
 
 void setearHora (){
+	  int buttonPressed;
       boolean salir=false;
       lcd.setCursor(0,0);
-      lcd.print("Setting: Horas   ");
+      lcd.print("Conf: Hora   ");
       ahora = Rtc.GetDateTime();
       String s=formatDateTime(ahora);
       Serial.print("Ahora:");
@@ -271,60 +268,52 @@ void setearHora (){
       seconds=ahora.Second();
       printTime();
       unsigned long starting=millis();
-      while(!salir ) {
-          // Increase the time model by one second
-          incTime();
-        
-          // Print the time on the LCD
-          printTime();
-        
-          // Listen for buttons for 1 second
-          salir=buttonListenTime();
-          if (millis()-starting>600000) {
-            //el usuario estuvo demasiado tiempo 
-            return;
-            }
+	  
+	  while  (!exitmenu){
+      
+			  do
+			  {
+				     buttonPressed=waitButton();
+			  } while(!(buttonPressed==KEYPAD_SELECT || buttonPressed==KEYPAD_LEFT || buttonPressed==KEYPAD_RIGHT ||
+					  buttonPressed==KEYPAD_UP || buttonPressed==KEYPAD_DOWN	) && !exitmenu);
+			  
+			  if (!exitmenu) {
+							exitmenu=waitReleaseButton(buttonPressed,buttonProcessTime,printTime);
+			  }
+       //buttonPressed=lcd.button();  //I splitted button reading and navigation in two procedures because 
       }
-  
-  }
-
-void setearFecha (){
-      boolean salir=false;
-      lcd.setCursor(0,0);
-      lcd.print("Setting: Dia   ");
-      ahora = Rtc.GetDateTime();
-      String s=formatDateTime(ahora);
-      Serial.print("Ahora:");
-      Serial.println(s);
-        
-      year=ahora.Year();
-      month=ahora.Month();
-      day=ahora.Day();
-      printTime();
-      unsigned long starting=millis();
-      while(!salir ) {
-          // Print the time on the LCD
-          printDate();
-        
-          // Listen for buttons for 1 second
-          salir=buttonListenDate();
-          if (millis()-starting>600000) {
-            //el usuario estuvo demasiado tiempo 
-            return;
-            }
-      }
-  
+ 
+  exitmenu=false;
   }
 
 
-boolean buttonListenTime() {
+boolean waitReleaseButton(int lastButtonPressed,bool (*funcion_procesar_boton)(int),void (*funcion_print)())
+{ int b=lastButtonPressed;
+  boolean salir=false;
+  
+  do {
+   
+   
+   // Increase the time model by one second
+   //incTime();
+        
+          // Print the time on the LCD
+   funcion_print();
+   salir=funcion_procesar_boton(b);
+   delay(200);
+   b = lcd.button();
+  } while(b!=KEYPAD_NONE && !salir);
+  return salir;
+  
+}
+
+boolean buttonProcessTime(int b) {
   // Read the buttons five times in a second
-  for (int i = 0; i < 6; i++) {
+  
 
     // Read the buttons value
-    int button = lcd.button();
-
-    switch (button) {
+   
+    switch (b) {
 
     // Right button was pushed
     case KEYPAD_RIGHT:
@@ -369,7 +358,9 @@ boolean buttonListenTime() {
 
       case KEYPAD_SELECT:
         if (settingTime==SALIR) {
+              Serial.println("Salir");
               return true;
+              
           }
         //seteo la hora
         ahora = Rtc.GetDateTime();
@@ -397,20 +388,52 @@ boolean buttonListenTime() {
     minutes %= 60;
     seconds %= 60;
     printTime();
+    return false;
 
-    // Wait one fifth of a second to complete
-    while(millis() % 150 != 0);
-  }
 }
 
-boolean buttonListenDate() {
-  // Read the buttons five times in a second
-  for (int i = 0; i < 6; i++) {
 
-    // Read the buttons value
-    int button = lcd.button();
+void setearFecha (){
+      boolean salir=false;
+      int buttonPressed;
+      lcd.setCursor(0,0);
+      lcd.print("Conf: Dia   ");
+      ahora = Rtc.GetDateTime();
+      String s=formatDateTime(ahora);
+      Serial.print("Ahora:");
+      Serial.println(s);
+        
+      year=ahora.Year();
+      month=ahora.Month();
+      day=ahora.Day();
+      printDate();
+      unsigned long starting=millis();
 
-    switch (button) {
+      while  (!exitmenu){
+      
+        do
+        {
+              Serial.println("wait button");
+              buttonPressed=waitButton();
+              Serial.print("button:");
+              Serial.println(buttonPressed);
+        } while(!(buttonPressed==KEYPAD_SELECT || buttonPressed==KEYPAD_LEFT || buttonPressed==KEYPAD_RIGHT ||
+            buttonPressed==KEYPAD_UP || buttonPressed==KEYPAD_DOWN  ) && !exitmenu);
+        
+        if (!exitmenu) {
+              exitmenu=waitReleaseButton(buttonPressed,buttonProcessDate,printDate);
+        }
+       //buttonPressed=lcd.button();  //I splitted button reading and navigation in two procedures because 
+      }
+      
+  exitmenu=false;
+  }
+
+
+
+boolean buttonProcessDate(int b) {
+
+    switch (b) {
 
     // Right button was pushed
     case KEYPAD_RIGHT:
@@ -454,7 +477,6 @@ boolean buttonListenDate() {
 
       case KEYPAD_SELECT:
         if (settingDate==SALIR) {
-              settingDate=DAY;
               return true;
           }
         //seteo la hora
@@ -484,48 +506,45 @@ boolean buttonListenDate() {
     month %= 13;
     if (month==0) month=1;
     printDate();
-
-    // Wait one tenth of a second to complete
-    while(millis() % 150 != 0);
-  }
+    return false;
 }
 
 // Print the current setting
 void printSettingTime() {
-  lcd.setCursor(9,0);
+  lcd.setCursor(6,0);
 
   switch (settingTime) {
   case HOURS:
-    lcd.print("Hours  ");
+    lcd.print("Hora  ");
     break;
   case MINUTES:
-    lcd.print("Minutes");
+    lcd.print("Minuto");
     break;
   case SECONDS:
-    lcd.print("Seconds");
+    lcd.print("Segundo");
     break;
   case SALIR:
-    lcd.print("Salir");
+    lcd.print("Salir   ");
   }
 }
 
 
 // Print the current setting
 void printSettingDate() {
-  lcd.setCursor(9,0);
+  lcd.setCursor(6,0);
 
   switch (settingDate) {
   case YEAR:
-    lcd.print("Year  ");
+    lcd.print("Año   ");
     break;
   case MONTH:
-    lcd.print("Month");
+    lcd.print("Mes   ");
     break;
   case DAY:
-    lcd.print("Day");
+    lcd.print("Dia   ");
     break;
   case SALIR:
-    lcd.print("Salir");
+    lcd.print("Salir   ");
   }
 }
 // Increase the time model by one second
@@ -655,4 +674,3 @@ void seteoReloj() {
     Rtc.Enable32kHzPin(false);
     Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone); 
   }
-
