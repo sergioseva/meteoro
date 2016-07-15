@@ -65,27 +65,27 @@ RtcDateTime ahora;
  
 void menuUsed(MenuUseEvent used){
   
-  
+  String smenu=String(used.item.getName());
   lcd.setCursor(0,1); 
   lcd.print("                ");
   lcd.setCursor(0,0);  
- if (used.item.getName()=="Salir           "){
-    lcd.print("Sali");
-  } else if  (used.item.getName().indexof("Cambiar Hora")!=-1){
+ if (smenu.indexOf("Salir ")!=-1){
+    lcd.print("Sali");  
+  } else if  (smenu.indexOf("Cambiar Hora")!=-1){
     setearHora();
-  }  else if  (used.item.getName().indexof("Cambiar Fecha")!=-1){
+  }  else if  (smenu.indexOf("Cambiar Fecha")!=-1){
     Serial.println("Cambiar fecha");
     setearFecha();
-  } else if  (used.item.getName().indexof("Reset Dia")!=-1){
+  } else if  (smenu.indexOf("Reset Dia")!=-1){
     Serial.println("Reset Dia");
-    resetAcumuladoDiario();
-  }  else if  (used.item.getName().indexof("Reset Mes")!=-1){
+//    resetAcumuladoDiario();
+  }  else if  (smenu.indexOf("Reset Mes")!=-1){
     Serial.println("Reset Mes");
-    resetAcumuladoMensual();
+//    resetAcumuladoMensual();
   }
-  else if (used.item.getName().indexof("Reset Total")!=-1){
+  else if (smenu.indexOf("Reset Total")!=-1){
     Serial.println("Reset Todo");
-    resetAcumuladoTodo();
+//    resetAcumuladoTodo();
   }
   
   //exitmenu=true;
@@ -196,28 +196,11 @@ void waitReleaseButton()
   delay(50);
 }
 
-void waitReleaseButton(int lastButtonPressed)
-{ int b=lastButtonPressed
-  
-  
-  do {
-   
-   
-   // Increase the time model by one second
-   incTime();
-        
-          // Print the time on the LCD
-   printTime();
-   salir=buttonListenTime(b);
-   delay(200);
-   b = lcd.button();
-  } while(b!=KEYPAD_NONE)
-  
-}
 
 int waitButton()
 {
   int buttonPressed; 
+  waitReleaseButton;
   unsigned long starting=millis();
   unsigned long current;
   while((buttonPressed=lcd.button())==KEYPAD_NONE)
@@ -225,7 +208,7 @@ int waitButton()
     current=millis();
     //controlo que no pase mas de un minuto en espera, sino salgo
     if ((current-starting)>60000) {
-          //exitmenu=true;
+          exitmenu=true;
           break;
           }
   }
@@ -236,6 +219,14 @@ int waitButton()
 
 
 
+
+void  readButtons(){  //read buttons status
+ 
+
+  int buttonPressed=lcd.button();
+ 
+                 
+}
 
 void navigateMenus() {
   MenuItem currentMenu=menu.getCurrent();
@@ -267,7 +258,6 @@ void navigateMenus() {
 }
 
 void setearHora (){
-	  int buttonPressed;
       boolean salir=false;
       lcd.setCursor(0,0);
       lcd.print("Setting: Horas   ");
@@ -281,23 +271,20 @@ void setearHora (){
       seconds=ahora.Second();
       printTime();
       unsigned long starting=millis();
-	  
-	  while  (!salir){
-      
-			  do
-			  {
-				
-							buttonPressed=waitButton();
-				
-			  } while(!(buttonPressed==KEYPAD_SELECT || buttonPressed==KEYPAD_LEFT || buttonPressed==KEYPAD_RIGHT ||
-					  buttonPressed==KEYPAD_UP || buttonPressed==KEYPAD_DOWN	) && !salir);
-			  
-			  if (!salir) {
-							waitReleaseButton(buttonPressed);
-			  }
-       //buttonPressed=lcd.button();  //I splitted button reading and navigation in two procedures because 
+      while(!salir ) {
+          // Increase the time model by one second
+          incTime();
+        
+          // Print the time on the LCD
+          printTime();
+        
+          // Listen for buttons for 1 second
+          salir=buttonListenTime();
+          if (millis()-starting>600000) {
+            //el usuario estuvo demasiado tiempo 
+            return;
+            }
       }
- 
   
   }
 
@@ -315,9 +302,6 @@ void setearFecha (){
       day=ahora.Day();
       printTime();
       unsigned long starting=millis();
-	  
-	  
-	  
       while(!salir ) {
           // Print the time on the LCD
           printDate();
@@ -333,13 +317,14 @@ void setearFecha (){
   }
 
 
-boolean buttonListenTime(int b) {
+boolean buttonListenTime() {
   // Read the buttons five times in a second
-
+  for (int i = 0; i < 6; i++) {
 
     // Read the buttons value
-   
-    switch (b) {
+    int button = lcd.button();
+
+    switch (button) {
 
     // Right button was pushed
     case KEYPAD_RIGHT:
@@ -413,12 +398,14 @@ boolean buttonListenTime(int b) {
     seconds %= 60;
     printTime();
 
-
+    // Wait one fifth of a second to complete
+    while(millis() % 150 != 0);
+  }
 }
 
 boolean buttonListenDate() {
   // Read the buttons five times in a second
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 6; i++) {
 
     // Read the buttons value
     int button = lcd.button();
@@ -467,6 +454,7 @@ boolean buttonListenDate() {
 
       case KEYPAD_SELECT:
         if (settingDate==SALIR) {
+              settingDate=DAY;
               return true;
           }
         //seteo la hora
@@ -497,8 +485,8 @@ boolean buttonListenDate() {
     if (month==0) month=1;
     printDate();
 
-    // Wait one fifth of a second to complete
-    while(millis() % 200 != 0);
+    // Wait one tenth of a second to complete
+    while(millis() % 150 != 0);
   }
 }
 
@@ -667,3 +655,4 @@ void seteoReloj() {
     Rtc.Enable32kHzPin(false);
     Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone); 
   }
+
