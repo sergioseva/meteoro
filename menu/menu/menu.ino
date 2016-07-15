@@ -65,27 +65,27 @@ RtcDateTime ahora;
  
 void menuUsed(MenuUseEvent used){
   
-  
+  String smenu=String(used.item.getName());
   lcd.setCursor(0,1); 
   lcd.print("                ");
   lcd.setCursor(0,0);  
- if (used.item.getName()=="Salir           "){
-    lcd.print("Sali");
-  } else if  (used.item.getName().indexof("Cambiar Hora")!=-1){
+ if (smenu.indexOf("Salir ")!=-1){
+    lcd.print("Sali");  
+  } else if  (smenu.indexOf("Cambiar Hora")!=-1){
     setearHora();
-  }  else if  (used.item.getName().indexof("Cambiar Fecha")!=-1){
+  }  else if  (smenu.indexOf("Cambiar Fecha")!=-1){
     Serial.println("Cambiar fecha");
     setearFecha();
-  } else if  (used.item.getName().indexof("Reset Dia")!=-1){
+  } else if  (smenu.indexOf("Reset Dia")!=-1){
     Serial.println("Reset Dia");
-    resetAcumuladoDiario();
-  }  else if  (used.item.getName().indexof("Reset Mes")!=-1){
+//    resetAcumuladoDiario();
+  }  else if  (smenu.indexOf("Reset Mes")!=-1){
     Serial.println("Reset Mes");
-    resetAcumuladoMensual();
+//    resetAcumuladoMensual();
   }
-  else if (used.item.getName().indexof("Reset Total")!=-1){
+  else if (smenu.indexOf("Reset Total")!=-1){
     Serial.println("Reset Todo");
-    resetAcumuladoTodo();
+//    resetAcumuladoTodo();
   }
   
   //exitmenu=true;
@@ -319,7 +319,7 @@ void setearFecha (){
 
 boolean buttonListenTime() {
   // Read the buttons five times in a second
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 6; i++) {
 
     // Read the buttons value
     int button = lcd.button();
@@ -399,13 +399,13 @@ boolean buttonListenTime() {
     printTime();
 
     // Wait one fifth of a second to complete
-    while(millis() % 200 != 0);
+    while(millis() % 150 != 0);
   }
 }
 
 boolean buttonListenDate() {
   // Read the buttons five times in a second
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 6; i++) {
 
     // Read the buttons value
     int button = lcd.button();
@@ -454,6 +454,7 @@ boolean buttonListenDate() {
 
       case KEYPAD_SELECT:
         if (settingDate==SALIR) {
+              settingDate=DAY;
               return true;
           }
         //seteo la hora
@@ -484,8 +485,8 @@ boolean buttonListenDate() {
     if (month==0) month=1;
     printDate();
 
-    // Wait one fifth of a second to complete
-    while(millis() % 200 != 0);
+    // Wait one tenth of a second to complete
+    while(millis() % 150 != 0);
   }
 }
 

@@ -122,7 +122,11 @@ void setup() {
 	//pantalla
     lcd.begin(16, 2);
     lcd.clear();
-
+    
+//resetea todo, comentar
+resetAcumuladoTodo();
+medicion=0;
+virtualPosition=0;
 
 }
 
@@ -198,18 +202,25 @@ void mostrarDatos(boolean serial)
   
   //muestro la medicion     
    if (virtualPosition != medicion) {
-		int diff=virtualPosition-medicion;
-        medicion = virtualPosition;
+		float diff=virtualPosition-medicion;
+     medicion = virtualPosition;
 		configuration.acumulado_mes +=diff;
 		configuration.acumulado_dia +=diff;
-		Serial.print("Count:");
+		Serial.print("Medicion:");
         Serial.println(medicion);
+    Serial.print("Mes:");
+        Serial.println(configuration.acumulado_mes);
+    Serial.print("Dia:");
+        Serial.println(configuration.acumulado_dia);
         //Grabo en la SD solo si es un nro entero
-		int med_int=(int) medicion;
-		if (medicion=med_int) {
+		int med_int=(int) (medicion+0.001);
+    Serial.print("Medicion entera:");
+        Serial.println(med_int);
+     //tuve que hacer la comparacion convirtiendo a string porque no daba igual aunque sea 2.00=2
+		if (String(medicion)==String(med_int)+".00") {
 			//cambio el valor de medicion, entonces escribo en la memoria
 			File dataFile = SD.open("datalog.txt", FILE_WRITE);
-		    
+		  Serial.print("Escribo en SD");  
 			// if the file is available, write to it:
 			if (dataFile) {
 				  lcd.setCursor(14,1);
@@ -238,9 +249,11 @@ void mostrarDatos(boolean serial)
   lcd.setCursor(0,0);
   lcd.print(datestring);
   lcd.setCursor(0,1);
-  s = String(round(configuration.acumulado_dia));
+  int ad=(int) configuration.acumulado_dia+0.1;
+  int am=(int) configuration.acumulado_mes+0.1;
+  s = String(ad);
   lcd.print("D:"+ s + " " + unidades);
-  s = String(round(configuration.acumulado_mes));
+  s = String(am);
   lcd.setCursor(8,1);
   lcd.print("M:"+ s + " " + unidades);
 
