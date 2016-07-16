@@ -214,14 +214,14 @@ void mostrarDatos(boolean serial)
   
   
   if (configuration.memoria && !error_memoria ) {
-				  lcd.setCursor(15,0);
+				  lcd.setCursor(15,1);
 				  lcd.print("M");
   } else if (configuration.memoria && error_memoria )
   {
-				  lcd.setCursor(15,0);
+				  lcd.setCursor(15,1);
 				  lcd.print("E");
   } else if (!configuration.memoria){
-				  lcd.setCursor(15,0);
+				  lcd.setCursor(15,1);
 				  lcd.print(" ");
   }
   
@@ -241,6 +241,8 @@ void mostrarDatos(boolean serial)
 		int med_int=(int) (medicion+0.001);
     Serial.print("Medicion entera:");
         Serial.println(med_int);
+
+        
      //tuve que hacer la comparacion convirtiendo a string porque no daba igual aunque sea 2.00=2
 		if ((String(medicion)==String(med_int)+".00") and configuration.memoria) {
 			//cambio el valor de medicion, entonces escribo en la memoria
@@ -248,7 +250,7 @@ void mostrarDatos(boolean serial)
 		  Serial.print("Escribo en SD");  
 			// if the file is available, write to it:
 			if (dataFile) {
-			      error_memoria=false;
+			    error_memoria=false;
 				  s = String(medicion);
 				  dataFile.println(datestring + "," + s + " " + unidades);
 				  dataFile.close();
@@ -376,6 +378,6 @@ void initSDcard(){
      Serial.println("Card failed, or not present");
      error_memoria=true;
    } else
-   Serial.println("card initialized.");
-   error_memoria=false;     
+      {Serial.println("card initialized.");
+      error_memoria=false;}     
   }

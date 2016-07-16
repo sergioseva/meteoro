@@ -62,7 +62,32 @@ RtcDateTime ahora;
 // enable on pin 6
 // d4, d5, d6, d7 on pins 5, 4, 3, 2
  boolean exitmenu=false;
- 
+
+
+void confirmar(String texto,void (*funcion_si)(),String conf1="",String conf2=""){
+int buttonPressed;
+lcd.setCursor(0,0);
+lcd.print(texto);
+lcd.setCursor(0,1);
+lcd.print("up si   down no");
+    do
+      {
+      buttonPressed=waitButton();
+      } while(!(buttonPressed==KEYPAD_UP || buttonPressed==KEYPAD_DOWN) && !exitmenu);
+      
+    if (!exitmenu) {
+      waitReleaseButton();
+      if (buttonPressed==KEYPAD_UP) {
+      funcion_si();
+      lcd.setCursor(0,0);
+      lcd.print(conf1);
+      lcd.setCursor(0,1);
+      lcd.print(conf2);
+      }     
+    }
+exitmenu=false;   
+}
+
 void menuUsed(MenuUseEvent used){
   
   String smenu=String(used.item.getName());
@@ -70,7 +95,7 @@ void menuUsed(MenuUseEvent used){
   lcd.print("                ");
   lcd.setCursor(0,0);  
   if (smenu.indexOf("Salir ")!=-1){
-    lcd.print("Sali");  
+    exitmenu=true; 
   } else if  (smenu.indexOf("Cambiar Hora")!=-1){
     setearHora();
     }  else if  (smenu.indexOf("Cambiar Fecha")!=-1){
@@ -143,6 +168,27 @@ void menuChanged(MenuChangeEvent changed){
   
 }
 
+void resetAcumuladoDiario(){
+Serial.println("resetAcumuladoDiario");
+}
+
+void resetAcumuladoMensual(){
+Serial.println("resetAcumuladoMensual");
+}
+
+void resetAcumuladoTodo(){
+Serial.println("resetAcumuladoTodo");
+}
+  
+void insertarMemoria() {
+  Serial.println("insertarMemoria");
+//configuration.memoria=true;
+//initSDcard();
+}
+
+void expulsarMemoria() {
+Serial.println("expulsar");
+}
 void setup()
 {
 
@@ -184,6 +230,7 @@ void loop()
 	  exitmenu=false;
 	  menu.toRoot();
 	  menu.moveDown();
+    buttonPressed=KEYPAD_NONE;
 	  while  (!exitmenu){
 		  
 		  while(!(buttonPressed==KEYPAD_SELECT || buttonPressed==KEYPAD_LEFT || buttonPressed==KEYPAD_RIGHT) && !exitmenu)
@@ -194,7 +241,7 @@ void loop()
 			waitReleaseButton();
 			navigateMenus(buttonPressed);  //in some situations I want to use the button for other purpose (eg. to change some settings)
 		  }
-	  //buttonPressed=lcd.button();  //I splitted button reading and navigation in two procedures because 
+	  buttonPressed=KEYPAD_NONE;  
 	  }
 	buttonPressed=KEYPAD_NONE;  
   
@@ -243,7 +290,7 @@ void navigateMenus(int b) {
   MenuItem currentMenu=menu.getCurrent();
   Serial.print("button:");
   Serial.println(b);
-  switch (navigateMenus){
+  switch (b){
     case KEYPAD_SELECT:
       if(!(currentMenu.moveDown() || currentMenu.getName()=="Subir           ")){  //if the current menu has a child and has been pressed enter then menu navigate to item below
         menu.use();
@@ -322,29 +369,7 @@ boolean waitReleaseButton(int lastButtonPressed,bool (*funcion_procesar_boton)(i
   
 }
 
-void confirmar(String texto,void (*funcion_si)(),String conf1="",String conf2=""){
-int buttonPressed;
-lcd.setCursor(0,0);
-lcd.print(texto);
-lcd.setCursor(0,1);
-lcd.print("up si   down no");
-	  do
-      {
-			buttonPressed=waitButton();
-      } while(!(buttonPressed==KEYPAD_UP || buttonPressed==KEYPAD_DOWN) && !exitmenu);
-      
-	  if (!exitmenu) {
-		  waitReleaseButton();
-		  if (buttonPressed==KEYPAD_UP) {
-			funcion_si();
-			lcd.setCursor(0,0);
-			lcd.print(conf1);
-			lcd.setCursor(0,1);
-			lcd.print(conf2);
-		  }		  
-		}
-exitmenu=false;	  
-}
+
 
 boolean buttonProcessTime(int b) {
   // Read the buttons five times in a second
