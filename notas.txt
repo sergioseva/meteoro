@@ -6,3 +6,6 @@ http://forum.arduino.cc/index.php?topic=165170.0
 
 g do clk di cs +
   50  52 51 53
+  
+Funcion como parametro a libreria  
+http://stackoverflow.com/questions/14427917/call-function-in-main-program-from-a-library-in-arduino
