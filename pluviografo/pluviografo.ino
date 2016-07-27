@@ -220,8 +220,8 @@ MenuBackend menu = MenuBackend(menuUsed,menuChanged);
     MenuItem menuItem3SubItem1 = MenuItem("Reset Dia       ");
     MenuItem menuItem3SubItem2 = MenuItem("Reset Mes       ");
 	MenuItem menuItem3SubItem3 = MenuItem("Reset Acum.     ");
-    MenuItem menuItem3SubItem3 = MenuItem("Reset Total     ");
-    MenuItem menuItem3SubItem4 = MenuItem("Subir           ");
+    MenuItem menuItem3SubItem4 = MenuItem("Reset Total     ");
+    MenuItem menuItem3SubItem5 = MenuItem("Subir           ");
   MenuItem menu1Item4 = MenuItem("Memoria...        ");
     MenuItem menuItem4SubItem1 = MenuItem("Expulsar        ");
     MenuItem menuItem4SubItem2 = MenuItem("Insertar       ");
@@ -294,7 +294,7 @@ void setup() {
   menu.getRoot().add(menu1Item1);
   menu1Item1.addRight(menu1Item2).addRight(menu1Item3).addRight(menu1Item4).addRight(menu1Item5);
   menu1Item3.addAfter(menuItem3SubItem4);//para que al elegir subir vaya al submenu
-  menu1Item3.add(menuItem3SubItem1).addRight(menuItem3SubItem2).addRight(menuItem3SubItem3).addRight(menuItem3SubItem4);
+  menu1Item3.add(menuItem3SubItem1).addRight(menuItem3SubItem2).addRight(menuItem3SubItem3).addRight(menuItem3SubItem4).addRight(menuItem3SubItem5);
   menu1Item4.addAfter(menuItem4SubItem3);//para que al elegir subir vaya al submenu
   menu1Item4.add(menuItem4SubItem1).addRight(menuItem4SubItem2).addRight(menuItem4SubItem3);
   
