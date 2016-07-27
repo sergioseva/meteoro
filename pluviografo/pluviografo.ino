@@ -91,8 +91,8 @@ volatile float     virtualPosition  =0;  // must be volatile to work with the is
 
 const float incremento=0.2;
 // interrupt service routine vars
-boolean A_set = false;              
-boolean B_set = false;
+boolean A_set = true;              
+boolean B_set = true;
 static boolean rotating=false;  
 bool error_memoria=false;
 
@@ -182,6 +182,9 @@ void menuUsed(MenuUseEvent used){
   }  else if  (smenu.indexOf("Reset Mes")!=-1){
     Serial.println("Reset Mes");
     confirmar("Confirma r. mes?",resetAcumuladoMensual,"Acum mensual    ", "es 0           ");
+  } else if  (smenu.indexOf("Reset Acum")!=-1){
+    Serial.println("Reset Acumulado");
+    confirmar("Confirma r. acum.?",resetMedicion,"Acum mensual    ", "es 0           ");
   }
   else if (smenu.indexOf("Reset Total")!=-1){
     Serial.println("Reset Todo");
@@ -216,6 +219,7 @@ MenuBackend menu = MenuBackend(menuUsed,menuChanged);
     MenuItem menu1Item3 = MenuItem("Reset...        ");
     MenuItem menuItem3SubItem1 = MenuItem("Reset Dia       ");
     MenuItem menuItem3SubItem2 = MenuItem("Reset Mes       ");
+	MenuItem menuItem3SubItem3 = MenuItem("Reset Acum.     ");
     MenuItem menuItem3SubItem3 = MenuItem("Reset Total     ");
     MenuItem menuItem3SubItem4 = MenuItem("Subir           ");
   MenuItem menu1Item4 = MenuItem("Memoria...        ");
@@ -254,9 +258,9 @@ void setup() {
 	digitalWrite(encoderPinA, LOW);
 	digitalWrite(encoderPinB, LOW);
 	// encoder pin on interrupt 0 (pin 2)
-	attachInterrupt(digitalPinToInterrupt(encoderPinA), doEncoderA, RISING);
+	attachInterrupt(digitalPinToInterrupt(encoderPinA), doEncoderA, LOW);
 	// encoder pin on interrupt 1 (pin 3)
-	attachInterrupt(digitalPinToInterrupt(encoderPinB), doEncoderB, RISING);
+	attachInterrupt(digitalPinToInterrupt(encoderPinB), doEncoderB, LOW);
   
   int count=EEPROM_readAnything(0, configuration);
    Serial.println(count);
@@ -796,9 +800,16 @@ configuration.acumulado_mes=0;
 EEPROM_writeAnything(0, configuration);
 }
 
+void resetMedicion(){
+configuration.medicion=0;  
+virtualPosition=0;
+EEPROM_writeAnything(0, configuration);
+}
+
 void resetAcumuladoTodo(){
 resetAcumuladoDiario();
 resetAcumuladoMensual();
+resetMedicion();
 }
   
 void insertarMemoria() {
@@ -880,7 +891,7 @@ void mostrarDatos(boolean serial)
 		if ((String(medicion)==String(med_int)+".00") and configuration.memoria) {
 			//cambio el valor de medicion, entonces escribo en la memoria
 			File dataFile = SD.open("pluvio.csv", FILE_WRITE);
-		  Serial.print("Escribo en SD");  
+		  Serial.print("Escribo en SD ");  
 			// if the file is available, write to it:
 			if (dataFile) {
 			    error_memoria=false;
@@ -891,14 +902,14 @@ void mostrarDatos(boolean serial)
 		  // if the file isn't open, pop up an error:
 			else {
 				Serial.println("error opening pluvio.csv trying to init sd card");
-				initSDcard();
+				initSDcard();	
 			}
 		}
 
 		//escribimos en la eeprom para no perder el valor si el dispositivo se apaga
 		configuration.medicion=medicion;
 		int c=EEPROM_writeAnything(0, configuration);
-		Serial.print("escribi medicion "); 
+		Serial.print("escribi en EEPROM medicion "); 
 		Serial.print(configuration.medicion) ;
 		Serial.print(" cantidad "); 
 		Serial.print(c); 
@@ -910,9 +921,9 @@ void mostrarDatos(boolean serial)
   lcd.setCursor(0,1);
   int ad=(int) configuration.acumulado_dia+0.1;
   int am=(int) configuration.acumulado_mes+0.1;
-  s = String(ad);
+  s = String(configuration.acumulado_dia);
   lcd.print("D:"+ s + " ");
-  s = String(am);
+  s = String(configuration.acumulado_mes);
   lcd.setCursor(8,1);
   lcd.print("M:"+ s + " ");
 
