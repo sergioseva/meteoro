@@ -98,33 +98,33 @@ bool error_memoria=false;
 
 // Interrupt on A changing state
 void doEncoderA(){
+  
   // debounce
   if ( rotating ) delay (1);  // wait a little until the bouncing is done
-
-  // Test transition, did things really RISING? 
-  if( digitalRead(encoderPinA) &&  !A_set ) {  // debounce once more
-    A_set = 1;
+ 
+  // Test transition, did things really changing? 
+  if( !digitalRead(encoderPinA) &&  A_set ) {  // debounce once more
+    A_set = 0;
     Serial.println("A");
     Serial.println(A_set);
     // adjust counter + if A leads B
     B_set=digitalRead(encoderPinB);
-    if ( A_set && !B_set ) 
+    if ( !A_set && B_set ) 
       virtualPosition += incremento;
 
     rotating = false;  // no more debouncing until loop() hits again
-  }
+  }  
 }
 
-// Interrupt on B changing state, same as A above
 void doEncoderB(){
   if ( rotating ) delay (1);
-  if( digitalRead(encoderPinB) &&  !B_set ) {
-    B_set = 1;
+  if( !digitalRead(encoderPinB) &&  B_set ) {
+    B_set = 0;
     Serial.println("B");
     Serial.println(B_set);
     //  adjust counter - 1 if B leads A
      A_set=digitalRead(encoderPinA);
-    if( B_set && !A_set ) 
+    if( !B_set && A_set ) 
       virtualPosition += incremento;
 
     rotating = false;
