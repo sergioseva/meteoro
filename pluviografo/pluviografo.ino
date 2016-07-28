@@ -62,13 +62,13 @@ byte down[8] = {
 struct config_t
 {   byte deflt; 
     float medicion;
-	int minutos_logueo;
-	float acumulado_mes;
-	float acumulado_dia;
-	int mes_actual;
-	int dia_actual;
-	bool memoria;
-	
+  int minutos_logueo;
+  float acumulado_mes;
+  float acumulado_dia;
+  int mes_actual;
+  int dia_actual;
+  bool memoria;
+  
 } configuration;
 
 
@@ -219,7 +219,7 @@ MenuBackend menu = MenuBackend(menuUsed,menuChanged);
     MenuItem menu1Item3 = MenuItem("Reset...        ");
     MenuItem menuItem3SubItem1 = MenuItem("Reset Dia       ");
     MenuItem menuItem3SubItem2 = MenuItem("Reset Mes       ");
-	MenuItem menuItem3SubItem3 = MenuItem("Reset Acum.     ");
+  MenuItem menuItem3SubItem3 = MenuItem("Reset Acum.     ");
     MenuItem menuItem3SubItem4 = MenuItem("Reset Total     ");
     MenuItem menuItem3SubItem5 = MenuItem("Subir           ");
   MenuItem menu1Item4 = MenuItem("Memoria...        ");
@@ -249,18 +249,18 @@ void menuChanged(MenuChangeEvent changed){
 
 void setup() {
    
-	Serial.begin(9600);
-	Wire.begin();
+  Serial.begin(9600);
+  Wire.begin();
    
-	pinMode(encoderPinA, INPUT); 
-	pinMode(encoderPinB, INPUT); 
-	// turn on pullup resistors
-	digitalWrite(encoderPinA, LOW);
-	digitalWrite(encoderPinB, LOW);
-	// encoder pin on interrupt 0 (pin 2)
-	attachInterrupt(digitalPinToInterrupt(encoderPinA), doEncoderA, LOW);
-	// encoder pin on interrupt 1 (pin 3)
-	attachInterrupt(digitalPinToInterrupt(encoderPinB), doEncoderB, LOW);
+  pinMode(encoderPinA, INPUT); 
+  pinMode(encoderPinB, INPUT); 
+  // turn on pullup resistors
+  digitalWrite(encoderPinA, HIGH);
+  digitalWrite(encoderPinB, HIGH);
+  // encoder pin on interrupt 0 (pin 2)
+  attachInterrupt(digitalPinToInterrupt(encoderPinA), doEncoderA, FALLING);
+  // encoder pin on interrupt 1 (pin 3)
+  attachInterrupt(digitalPinToInterrupt(encoderPinB), doEncoderB, FALLING);
   
   int count=EEPROM_readAnything(0, configuration);
    Serial.println(count);
@@ -268,20 +268,20 @@ void setup() {
    Serial.println(configuration.medicion);
    Serial.println(configuration.minutos_logueo);
    
-	  if (configuration.deflt==255) {
-			// es la primera vez que se inicia el sistema
-			  configuration.deflt=0;
-			  configuration.medicion=0;
-			  configuration.minutos_logueo=10;
-			  configuration.memoria=true;
-			  EEPROM_writeAnything(0, configuration);
-	  }
+    if (configuration.deflt==255) {
+      // es la primera vez que se inicia el sistema
+        configuration.deflt=0;
+        configuration.medicion=0;
+        configuration.minutos_logueo=10;
+        configuration.memoria=true;
+        EEPROM_writeAnything(0, configuration);
+    }
    else {
     
-			medicion=configuration.medicion;
-			virtualPosition=medicion;
-			Serial.print("medicion en setup:");
-			Serial.println(medicion);
+      medicion=configuration.medicion;
+      virtualPosition=medicion;
+      Serial.print("medicion en setup:");
+      Serial.println(medicion);
     }
     //intervalo de grabacion en la micro sd en milisegundos
     intervalo = configuration.minutos_logueo*60*1000;
@@ -337,7 +337,7 @@ void procesarMenu(){
   
   }
 void loop() {
-	
+  
     rotating = true;  // reset the debouncer
     
     leerHoraYTemp();
@@ -776,17 +776,17 @@ void leerHoraYTemp(){
 
 
 void chequearAcumulados(){
-	//Chequea que no haya cambiado el dia y el mes, si cambió, vuelvo parametros a 0
-	if (configuration.mes_actual!=now.Month()){
-		configuration.acumulado_mes=0;
-		configuration.mes_actual=now.Month();
-	}
-	
-	if (configuration.dia_actual!=now.Day()){
-		configuration.acumulado_dia=0;
-		configuration.dia_actual=now.Day();
-	}
-	EEPROM_writeAnything(0, configuration);
+  //Chequea que no haya cambiado el dia y el mes, si cambió, vuelvo parametros a 0
+  if (configuration.mes_actual!=now.Month()){
+    configuration.acumulado_mes=0;
+    configuration.mes_actual=now.Month();
+  }
+  
+  if (configuration.dia_actual!=now.Day()){
+    configuration.acumulado_dia=0;
+    configuration.dia_actual=now.Day();
+  }
+  EEPROM_writeAnything(0, configuration);
  
 }
 
@@ -847,74 +847,74 @@ delay(2000);
 
 void mostrarDatos(boolean serial)
 {
-	
+  
   //muestro fecha y hora
   String datestring=formatDateTime(now);
   //if (serial)
-	   // Serial.print(datestring);
-	    
+     // Serial.print(datestring);
+      
   //lcd.clear();
   String s;
   
   
   if (configuration.memoria && !error_memoria ) {
-				  lcd.setCursor(15,1);
-				  lcd.print("M");
+          lcd.setCursor(15,1);
+          lcd.print("M");
   } else if (configuration.memoria && error_memoria )
   {
-				  lcd.setCursor(15,1);
-				  lcd.print("E");
+          lcd.setCursor(15,1);
+          lcd.print("E");
   } else if (!configuration.memoria){
-				  lcd.setCursor(15,1);
-				  lcd.print(" ");
+          lcd.setCursor(15,1);
+          lcd.print(" ");
   }
   
   //muestro la medicion     
    if (virtualPosition != medicion) {
-		float diff=virtualPosition-medicion;
+    float diff=virtualPosition-medicion;
      medicion = virtualPosition;
-		configuration.acumulado_mes +=diff;
-		configuration.acumulado_dia +=diff;
-		Serial.print("Medicion:");
+    configuration.acumulado_mes +=diff;
+    configuration.acumulado_dia +=diff;
+    Serial.print("Medicion:");
         Serial.println(medicion);
     Serial.print("Mes:");
         Serial.println(configuration.acumulado_mes);
     Serial.print("Dia:");
         Serial.println(configuration.acumulado_dia);
         //Grabo en la SD solo si es un nro entero
-		int med_int=(int) (medicion+0.001);
+    int med_int=(int) (medicion+0.001);
     Serial.print("Medicion entera:");
         Serial.println(med_int);
 
         
      //tuve que hacer la comparacion convirtiendo a string porque no daba igual aunque sea 2.00=2
-		if ((String(medicion)==String(med_int)+".00") and configuration.memoria) {
-			//cambio el valor de medicion, entonces escribo en la memoria
-			File dataFile = SD.open("pluvio.csv", FILE_WRITE);
-		  Serial.print("Escribo en SD ");  
-			// if the file is available, write to it:
-			if (dataFile) {
-			    error_memoria=false;
-				  s = String(medicion);
-				  dataFile.println(datestring + "," + s + " " + unidades);
-				  dataFile.close();
-			}  
-		  // if the file isn't open, pop up an error:
-			else {
-				Serial.println("error opening pluvio.csv trying to init sd card");
-				initSDcard();	
-			}
-		}
+    if ((String(medicion)==String(med_int)+".00") and configuration.memoria) {
+      //cambio el valor de medicion, entonces escribo en la memoria
+      File dataFile = SD.open("pluvio.csv", FILE_WRITE);
+      Serial.print("Escribo en SD ");  
+      // if the file is available, write to it:
+      if (dataFile) {
+          error_memoria=false;
+          s = String(medicion);
+          dataFile.println(datestring + "," + s + " " + unidades);
+          dataFile.close();
+      }  
+      // if the file isn't open, pop up an error:
+      else {
+        Serial.println("error opening pluvio.csv trying to init sd card");
+        initSDcard(); 
+      }
+    }
 
-		//escribimos en la eeprom para no perder el valor si el dispositivo se apaga
-		configuration.medicion=medicion;
-		int c=EEPROM_writeAnything(0, configuration);
-		Serial.print("escribi en EEPROM medicion "); 
-		Serial.print(configuration.medicion) ;
-		Serial.print(" cantidad "); 
-		Serial.print(c); 
-		Serial.println();
-  }	
+    //escribimos en la eeprom para no perder el valor si el dispositivo se apaga
+    configuration.medicion=medicion;
+    int c=EEPROM_writeAnything(0, configuration);
+    Serial.print("escribi en EEPROM medicion "); 
+    Serial.print(configuration.medicion) ;
+    Serial.print(" cantidad "); 
+    Serial.print(c); 
+    Serial.println();
+  } 
   
   lcd.setCursor(0,0);
   lcd.print(datestring);
