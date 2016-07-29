@@ -60,15 +60,16 @@ byte down[8] = {
 
 
 struct config_t
-{   byte deflt; 
-    float medicion;
+{ byte deflt; 
+  float medicion;
   int minutos_logueo;
   float acumulado_mes;
   float acumulado_dia;
-  int mes_actual;
   int dia_actual;
+  int hora_actual;
+  float dia[24];
+  float mes[30];
   bool memoria;
-  
 } configuration;
 
 
@@ -274,6 +275,8 @@ void setup() {
         configuration.medicion=0;
         configuration.minutos_logueo=10;
         configuration.memoria=true;
+		resetAcumuladoDiario();
+		resetAcumuladoMensual();
         EEPROM_writeAnything(0, configuration);
     }
    else {
@@ -777,26 +780,31 @@ void leerHoraYTemp(){
 
 void chequearAcumulados(){
   //Chequea que no haya cambiado el dia y el mes, si cambió, vuelvo parametros a 0
-  if (configuration.mes_actual!=now.Month()){
-    configuration.acumulado_mes=0;
-    configuration.mes_actual=now.Month();
+  if (configuration.hora_actual!=now.Hour()){
+    dia[configuration.hora_actual]=0;
+    configuration.hora_actual=now.Hour();
   }
   
   if (configuration.dia_actual!=now.Day()){
-    configuration.acumulado_dia=0;
+    mes[configuration.dia_actual]=0;
     configuration.dia_actual=now.Day();
   }
   EEPROM_writeAnything(0, configuration);
- 
 }
 
+
 void resetAcumuladoDiario(){
-configuration.acumulado_dia=0;  
+
+for (i=0;i<24;i++){
+	configuration.dia[i]=0;
+}
 EEPROM_writeAnything(0, configuration);
 }
 
 void resetAcumuladoMensual(){
-configuration.acumulado_mes=0;  
+for (i=0;i<30;i++){
+	configuration.mes[i]=0;
+}
 EEPROM_writeAnything(0, configuration);
 }
 
@@ -845,9 +853,29 @@ lcd.print("memoria");
 delay(2000);
 }
 
+float totalDia(){
+	float ad=0;
+	for (i=0;i<24;i++){
+		ad+=configuration.dia[i];
+	}
+	return ad;
+}
+
+
+float totalMes(){
+	float am=0;
+	for (i=0;i<30;i++){
+		am+=configuration.mes[i];
+	}
+	return am;
+}
+
+
+
 void mostrarDatos(boolean serial)
 {
-  
+  float fam=0;
+  float fad=0;
   //muestro fecha y hora
   String datestring=formatDateTime(now);
   //if (serial)
@@ -873,14 +901,16 @@ void mostrarDatos(boolean serial)
    if (virtualPosition != medicion) {
     float diff=virtualPosition-medicion;
      medicion = virtualPosition;
-    configuration.acumulado_mes +=diff;
-    configuration.acumulado_dia +=diff;
+	 configuration.dia[configuration.hora_actual] +=diff;
+	 configuration.mes[configuration.dia_actual] +=diff;
+     fad=totalDia();
+	 fam=totalMes;
     Serial.print("Medicion:");
         Serial.println(medicion);
     Serial.print("Mes:");
-        Serial.println(configuration.acumulado_mes);
+        Serial.println(fam);
     Serial.print("Dia:");
-        Serial.println(configuration.acumulado_dia);
+        Serial.println(fad);
         //Grabo en la SD solo si es un nro entero
     int med_int=(int) (medicion+0.001);
     Serial.print("Medicion entera:");
@@ -919,8 +949,8 @@ void mostrarDatos(boolean serial)
   lcd.setCursor(0,0);
   lcd.print(datestring);
   lcd.setCursor(0,1);
-  int ad=(int) configuration.acumulado_dia+0.1;
-  int am=(int) configuration.acumulado_mes+0.1;
+  int ad=(int) fad+0.1;
+  int am=(int) fam+0.1;
   s = String(configuration.acumulado_dia);
   lcd.print("D:"+ s + " ");
   s = String(configuration.acumulado_mes);
