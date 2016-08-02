@@ -77,7 +77,7 @@ RtcDateTime now;
 float medicion=0;
 String  unidades= "mm";
 LCDKeypad lcd;
-
+#define LCD_Backlight 10 // 15. BL1 - Backlight + 
 //LiquidCrystal lcd(8,9,4,5,6,7); 
 const int chipSelect = 53;
 //variables para el periodo de grabacion en la SD
@@ -307,11 +307,14 @@ void setup() {
   //pantalla
     lcd.begin(16, 2);
     lcd.clear();
+    pinMode(LCD_Backlight, OUTPUT); 
+    analogWrite(LCD_Backlight, 128); // Set the brightness of the backlight
 }
 
 void procesarMenu(){
   int buttonPressed=lcd.button();
   if (buttonPressed==KEYPAD_SELECT){
+    analogWrite(LCD_Backlight, 255); // Set the brightness of the backlight
     waitReleaseButton();
     lcd.setCursor(0,0);  
     lcd.print("Menu            ");
@@ -332,7 +335,7 @@ void procesarMenu(){
     buttonPressed=KEYPAD_NONE;  
     }
   buttonPressed=KEYPAD_NONE;  
-  
+  analogWrite(LCD_Backlight, 128); // Set the brightness of the backlight
 }
   
   }
@@ -922,8 +925,10 @@ void mostrarDatos(boolean serial)
   int ad=(int) configuration.acumulado_dia+0.1;
   int am=(int) configuration.acumulado_mes+0.1;
   s = String(configuration.acumulado_dia);
+  s = s.substring(0,s.length()-1);
   lcd.print("D:"+ s + " ");
   s = String(configuration.acumulado_mes);
+  s = s.substring(0,s.length()-1);
   lcd.setCursor(8,1);
   lcd.print("M:"+ s + " ");
 
