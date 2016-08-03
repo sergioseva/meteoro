@@ -1,7 +1,7 @@
 #include <MenuBackend.h>    //MenuBackend library - copyright by Alexander Brevig
 #include <LiquidCrystal.h>
 #include <LCDKeypad.h>
-#include <SD.h>
+#include <SDM.h>
 #include <Wire.h>
 #include <RtcDS3231.h>
 #include "EEPROMAnything.h"
@@ -219,13 +219,13 @@ MenuBackend menu = MenuBackend(menuUsed,menuChanged);
     MenuItem menu1Item3 = MenuItem("Reset...        ");
     MenuItem menuItem3SubItem1 = MenuItem("Reset Dia       ");
     MenuItem menuItem3SubItem2 = MenuItem("Reset Mes       ");
-  MenuItem menuItem3SubItem3 = MenuItem("Reset Acum.     ");
+    MenuItem menuItem3SubItem3 = MenuItem("Reset Acum.     ");
     MenuItem menuItem3SubItem4 = MenuItem("Reset Total     ");
-    MenuItem menuItem3SubItem5 = MenuItem("Subir           ");
-  MenuItem menu1Item4 = MenuItem("Memoria...        ");
-    MenuItem menuItem4SubItem1 = MenuItem("Expulsar        ");
-    MenuItem menuItem4SubItem2 = MenuItem("Insertar       ");
-    MenuItem menuItem4SubItem3 = MenuItem("Subir           ");
+    MenuItem menuItem3SubItem5 = MenuItem("Menu anterior   ");
+    MenuItem menu1Item4 = MenuItem("Memoria...        ");
+    MenuItem menuItem4SubItem1 = MenuItem("Insertar        ");
+    MenuItem menuItem4SubItem2 = MenuItem("Expulsar        ");
+    MenuItem menuItem4SubItem3 = MenuItem("Menu anterior   ");
     MenuItem menu1Item5 = MenuItem("Salir           ");
 
 
@@ -293,7 +293,7 @@ void setup() {
  //configure menu
   menu.getRoot().add(menu1Item1);
   menu1Item1.addRight(menu1Item2).addRight(menu1Item3).addRight(menu1Item4).addRight(menu1Item5);
-  menu1Item3.addAfter(menuItem3SubItem4);//para que al elegir subir vaya al submenu
+  menu1Item3.addAfter(menuItem3SubItem5);//para que al elegir subir vaya al submenu
   menu1Item3.add(menuItem3SubItem1).addRight(menuItem3SubItem2).addRight(menuItem3SubItem3).addRight(menuItem3SubItem4).addRight(menuItem3SubItem5);
   menu1Item4.addAfter(menuItem4SubItem3);//para que al elegir subir vaya al submenu
   menu1Item4.add(menuItem4SubItem1).addRight(menuItem4SubItem2).addRight(menuItem4SubItem3);
@@ -390,9 +390,9 @@ void navigateMenus(int b) {
   Serial.println(b);
   switch (b){
     case KEYPAD_SELECT:
-      if(!(currentMenu.moveDown() || currentMenu.getName()=="Subir           ")){  //if the current menu has a child and has been pressed enter then menu navigate to item below
+      if(!(currentMenu.moveDown() || currentMenu.getName()=="Menu anterior   ")){  //if the current menu has a child and has been pressed enter then menu navigate to item below
         menu.use();
-      }else if (currentMenu.getName()=="Subir           ") {
+      }else if (currentMenu.getName()=="Menu anterior   ") {
         menu.moveUp();
          Serial.print("moveUp");
         }      
@@ -817,12 +817,13 @@ resetMedicion();
   
 void insertarMemoria() {
 configuration.memoria=true;
-//chequeo el acceso al archivo
-      File dataFile = SD.open("pluvio.csv", FILE_WRITE);
-      // if the file is available, write to it:
-      if (dataFile) {
-          error_memoria=false;
-          dataFile.close();
+
+  lcd.setCursor(0,0);  
+  lcd.print("Verificando     ");
+  lcd.setCursor(0,1);
+  lcd.print("memoria         "); 
+  initSDcard();
+     if (!error_memoria) {
           lcd.setCursor(0,0);  
           lcd.print("Memoria ok      ");
           lcd.setCursor(0,1);
@@ -830,13 +831,12 @@ configuration.memoria=true;
       }  
       // if the file isn't open, pop up an error:
       else {
-        error_memoria=true;   
         lcd.setCursor(0,0);  
         lcd.print("Error en        ");
         lcd.setCursor(0,1);
         lcd.print("memoria         ");      
       }
-     delay(2000); 
+      delay(2000); 
 }
 
 void expulsarMemoria() {
