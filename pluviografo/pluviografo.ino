@@ -14,7 +14,10 @@
 #define MONTH 1
 #define DAY 0
 #define SALIR 3
-
+#define LCD_Backlight 10 // 15. BL1 - Backlight + 
+#define minutos_stby 10
+#define PANTALLA_ACTIVA 0
+#define PANTALLA_STBY 1
 // The time model
 unsigned int year = 0;
 unsigned int month = 0;
@@ -25,6 +28,7 @@ unsigned int seconds = 0;
 unsigned int settingTime = 0;
 unsigned int settingDate = 0;
 boolean exitmenu=false;
+unsigned int estadoPantalla = PANTALLA_ACTIVA;
 
 byte enie[8] = {
     B01001,
@@ -68,6 +72,8 @@ struct config_t
   int mes_actual;
   int dia_actual;
   bool memoria;
+  byte contrast_stby;
+  byte contrast_active;
   
 } configuration;
 
@@ -77,12 +83,13 @@ RtcDateTime now;
 float medicion=0;
 String  unidades= "mm";
 LCDKeypad lcd;
-#define LCD_Backlight 10 // 15. BL1 - Backlight + 
+
 //LiquidCrystal lcd(8,9,4,5,6,7); 
 const int chipSelect = 53;
 //variables para el periodo de grabacion en la SD
 long intervalo;
 unsigned long previousMillis = 0;
+unsigned long millisPantalla=0;
 
 //variables para el encoder
 const int encoderPinA=18;                   // Used for generating interrupts using CLK signal
@@ -207,6 +214,7 @@ void menuUsed(MenuUseEvent used){
 //  lcd.print(smenu);
   exitmenu=true;
   lcd.clear();
+  activarPantalla();
 //  menu.toRoot();  //back to Main
 }
 
@@ -275,6 +283,8 @@ void setup() {
         configuration.minutos_logueo=10;
         configuration.memoria=true;
         EEPROM_writeAnything(0, configuration);
+		byte contrast_stby=0;
+        byte contrast_active=128;
     }
    else {
     
@@ -308,13 +318,19 @@ void setup() {
     lcd.begin(16, 2);
     lcd.clear();
     pinMode(LCD_Backlight, OUTPUT); 
-    analogWrite(LCD_Backlight, 128); // Set the brightness of the backlight
+    analogWrite(LCD_Backlight, configuration.contrast_active); // Set the brightness of the backlight
+	millisPantalla=Millis();
+	estadoPantalla = PANTALLA_ACTIVA;
 }
 
 void procesarMenu(){
   int buttonPressed=lcd.button();
+  if (estado_pantalla==PANTALLA_STBY && buttonPressed!=KEYPAD_NONE) {
+    activarPantalla();
+	return;
+  }
+  
   if (buttonPressed==KEYPAD_SELECT){
-    analogWrite(LCD_Backlight, 255); // Set the brightness of the backlight
     waitReleaseButton();
     lcd.setCursor(0,0);  
     lcd.print("Menu            ");
@@ -334,15 +350,16 @@ void procesarMenu(){
       }
     buttonPressed=KEYPAD_NONE;  
     }
-  buttonPressed=KEYPAD_NONE;  
-  analogWrite(LCD_Backlight, 128); // Set the brightness of the backlight
+    buttonPressed=KEYPAD_NONE; 
+	activarPantalla();	
+  
 }
   
   }
 void loop() {
   
     rotating = true;  // reset the debouncer
-    
+    controlarContraste();
     leerHoraYTemp();
     chequearAcumulados();
     mostrarDatos(true);  // Escribimos el valor en pantalla
@@ -381,8 +398,20 @@ int waitButton()
   return buttonPressed;
 }
 
+void controlarContraste(){
+   unsigned long current;
+   current=millis();
+   if ((current-millisPantalla)>(minutos_stby*60*1000)) {
+    analogWrite(LCD_Backlight, configuration.contrast_stby);  
+	estadoPantalla = PANTALLA_STBY;    
+    }
+}
 
-
+void activarPantalla(){
+    analogWrite(LCD_Backlight, configuration.contrast_activ);  
+	estadoPantalla = PANTALLA_ACTIVA;   
+	millisPantalla=millis();
+}
 
 void navigateMenus(int b) {
   MenuItem currentMenu=menu.getCurrent();
