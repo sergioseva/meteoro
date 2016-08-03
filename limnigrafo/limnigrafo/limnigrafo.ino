@@ -1,7 +1,7 @@
 #include <MenuBackend.h>    //MenuBackend library - copyright by Alexander Brevig
 #include <LiquidCrystal.h>
 #include <LCDKeypad.h>
-#include <SD.h>
+#include <SDM.h>
 #include <Wire.h>
 #include <RtcDS3231.h>
 #include "EEPROMAnything.h"
@@ -747,12 +747,12 @@ void printDate() {
 
 void insertarMemoria() {
 configuration.memoria=true;
-//chequeo el acceso al archivo
-      File dataFile = SD.open("limni.csv", FILE_WRITE);
-      // if the file is available, write to it:
-      if (dataFile) {
-          error_memoria=false;
-          dataFile.close();
+  lcd.setCursor(0,0);  
+  lcd.print("Verificando     ");
+  lcd.setCursor(0,1);
+  lcd.print("memoria         "); 
+initSDcard();
+     if (!error_memoria) {
           lcd.setCursor(0,0);  
           lcd.print("Memoria ok      ");
           lcd.setCursor(0,1);
@@ -760,13 +760,12 @@ configuration.memoria=true;
       }  
       // if the file isn't open, pop up an error:
       else {
-        error_memoria=true;   
         lcd.setCursor(0,0);  
         lcd.print("Error en        ");
         lcd.setCursor(0,1);
         lcd.print("memoria         ");      
       }
-     delay(2000); 
+      delay(2000);
 }
 
 void expulsarMemoria() {
@@ -842,6 +841,7 @@ void mostrarDatos(boolean serial)
       lcd.print("  ");
 			dataFile.println(datestring + "," + s + " " + unidades);
 			dataFile.close();
+      Serial.println("Escribi en memoria");
         }  
       // if the file isn't open, pop up an error:
 		else {
