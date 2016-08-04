@@ -292,9 +292,7 @@ void setup() {
       virtualPosition=medicion;
       Serial.print("medicion en setup:");
       Serial.println(medicion);
-      //remover las siguientes dos lineas
-      configuration.contrast_stby=0;
-      configuration.contrast_active=128;
+      brillo=configuration.contrast_active/12;
     }
     //intervalo de grabacion en la micro sd en milisegundos
     intervalo = configuration.minutos_logueo*60*1000;
@@ -321,9 +319,7 @@ void setup() {
     lcd.begin(16, 2);
     lcd.clear();
     pinMode(LCD_Backlight, OUTPUT); 
-    analogWrite(LCD_Backlight, configuration.contrast_active); // Set the brightness of the backlight
-   	millisPantalla=millis();
-  	estado_pantalla = PANTALLA_ACTIVA;
+    activarPantalla();
 }
 
 void procesarMenu(){
@@ -355,7 +351,7 @@ void procesarMenu(){
     buttonPressed=KEYPAD_NONE;  
     }
     buttonPressed=KEYPAD_NONE; 
-	activarPantalla();	
+	  activarPantalla();	
   
 }
   
@@ -619,15 +615,24 @@ boolean buttonProcessBrillo(int b) {
     // Up button was pushed
     case KEYPAD_UP:
         brillo++;
-        configuration.contrast_active+= 12;
+        if (brillo==21) {
+          brillo=0;
+          configuration.contrast_active=0;
+          } else {
+          configuration.contrast_active+= 12;
+          }
         activarPantalla();
         break;
 
     // Down button was pushed
     case KEYPAD_DOWN:
       brillo--;
-      if (brillo==-1) brillo=20;
-      configuration.contrast_active-= 12;
+      if (brillo==-1) {
+          brillo=20;
+          configuration.contrast_active=12*20;
+        } else {
+          configuration.contrast_active-= 12;
+        }      
       activarPantalla();
       break;
 
@@ -638,7 +643,6 @@ boolean buttonProcessBrillo(int b) {
         
     }
     activarPantalla();
-    brillo %= 20;
     printBrillo();
     return false;
 
