@@ -293,6 +293,11 @@ void setup() {
       Serial.print("medicion en setup:");
       Serial.println(medicion);
       brillo=configuration.contrast_active/12;
+      //prevengo que la pantalla arranque apagada
+      if (brillo==0){
+          brillo=10;
+          configuration.contrast_active=12*10;
+        }
     }
     //intervalo de grabacion en la micro sd en milisegundos
     intervalo = configuration.minutos_logueo*60*1000;
