@@ -15,9 +15,10 @@
 #define DAY 0
 #define SALIR 3
 #define LCD_Backlight 10 // 15. BL1 - Backlight + 
-#define minutos_stby 10
 #define PANTALLA_ACTIVA 0
 #define PANTALLA_STBY 1
+const float minutos_stby=10;
+int brillo=0;
 // The time model
 unsigned int year = 0;
 unsigned int month = 0;
@@ -28,7 +29,7 @@ unsigned int seconds = 0;
 unsigned int settingTime = 0;
 unsigned int settingDate = 0;
 boolean exitmenu=false;
-unsigned int estadoPantalla = PANTALLA_ACTIVA;
+unsigned int estado_pantalla = PANTALLA_ACTIVA;
 
 byte enie[8] = {
     B01001,
@@ -199,19 +200,17 @@ void menuUsed(MenuUseEvent used){
   } else if  (smenu.indexOf("Expulsar")!=-1){
     Serial.println("Expulsar");
     expulsarMemoria();
-    
-  //  resetAcumuladoMensual();
   }
   else if (smenu.indexOf("Insertar")!=-1){
     Serial.println("Insertar");
     insertarMemoria();  
-  //  resetAcumuladoTodo();
+
+  }
+  else if (smenu.indexOf("Brillo")!=-1){
+    Serial.println("Brillo");
+    configurarBrillo();  
   }
 
-//  lcd.setCursor(0,0);  
-//  lcd.print("Menu            ");
-//  lcd.setCursor(0,1);
-//  lcd.print(smenu);
   exitmenu=true;
   lcd.clear();
   activarPantalla();
@@ -230,11 +229,12 @@ MenuBackend menu = MenuBackend(menuUsed,menuChanged);
     MenuItem menuItem3SubItem3 = MenuItem("Reset Acum.     ");
     MenuItem menuItem3SubItem4 = MenuItem("Reset Total     ");
     MenuItem menuItem3SubItem5 = MenuItem("Menu anterior   ");
-    MenuItem menu1Item4 = MenuItem("Memoria...        ");
+    MenuItem menu1Item4 = MenuItem("Memoria...      ");
     MenuItem menuItem4SubItem1 = MenuItem("Insertar        ");
     MenuItem menuItem4SubItem2 = MenuItem("Expulsar        ");
     MenuItem menuItem4SubItem3 = MenuItem("Menu anterior   ");
-    MenuItem menu1Item5 = MenuItem("Salir           ");
+    MenuItem menu1Item5 = MenuItem("Brillo          ");
+    MenuItem menu1Item6 = MenuItem("Salir           ");
 
 
 
@@ -283,8 +283,8 @@ void setup() {
         configuration.minutos_logueo=10;
         configuration.memoria=true;
         EEPROM_writeAnything(0, configuration);
-		byte contrast_stby=0;
-        byte contrast_active=128;
+		    configuration.contrast_stby=0;
+        configuration.contrast_active=128;
     }
    else {
     
@@ -292,6 +292,9 @@ void setup() {
       virtualPosition=medicion;
       Serial.print("medicion en setup:");
       Serial.println(medicion);
+      //remover las siguientes dos lineas
+      configuration.contrast_stby=0;
+      configuration.contrast_active=128;
     }
     //intervalo de grabacion en la micro sd en milisegundos
     intervalo = configuration.minutos_logueo*60*1000;
@@ -302,7 +305,7 @@ void setup() {
     
  //configure menu
   menu.getRoot().add(menu1Item1);
-  menu1Item1.addRight(menu1Item2).addRight(menu1Item3).addRight(menu1Item4).addRight(menu1Item5);
+  menu1Item1.addRight(menu1Item2).addRight(menu1Item3).addRight(menu1Item4).addRight(menu1Item5).addRight(menu1Item6);
   menu1Item3.addAfter(menuItem3SubItem5);//para que al elegir subir vaya al submenu
   menu1Item3.add(menuItem3SubItem1).addRight(menuItem3SubItem2).addRight(menuItem3SubItem3).addRight(menuItem3SubItem4).addRight(menuItem3SubItem5);
   menu1Item4.addAfter(menuItem4SubItem3);//para que al elegir subir vaya al submenu
@@ -319,15 +322,16 @@ void setup() {
     lcd.clear();
     pinMode(LCD_Backlight, OUTPUT); 
     analogWrite(LCD_Backlight, configuration.contrast_active); // Set the brightness of the backlight
-	millisPantalla=Millis();
-	estadoPantalla = PANTALLA_ACTIVA;
+   	millisPantalla=millis();
+  	estado_pantalla = PANTALLA_ACTIVA;
 }
 
 void procesarMenu(){
   int buttonPressed=lcd.button();
   if (estado_pantalla==PANTALLA_STBY && buttonPressed!=KEYPAD_NONE) {
     activarPantalla();
-	return;
+    waitReleaseButton();
+	  return;
   }
   
   if (buttonPressed==KEYPAD_SELECT){
@@ -403,14 +407,14 @@ void controlarContraste(){
    current=millis();
    if ((current-millisPantalla)>(minutos_stby*60*1000)) {
     analogWrite(LCD_Backlight, configuration.contrast_stby);  
-	estadoPantalla = PANTALLA_STBY;    
+  	estado_pantalla = PANTALLA_STBY;    
     }
 }
 
 void activarPantalla(){
-    analogWrite(LCD_Backlight, configuration.contrast_activ);  
-	estadoPantalla = PANTALLA_ACTIVA;   
-	millisPantalla=millis();
+    analogWrite(LCD_Backlight, configuration.contrast_active);  
+  	estado_pantalla = PANTALLA_ACTIVA;   
+	  millisPantalla=millis();
 }
 
 void navigateMenus(int b) {
@@ -475,7 +479,31 @@ void setearHora (){
   exitmenu=false;
   }
 
-
+void configurarBrillo (){
+    int buttonPressed;
+      boolean salir=false;
+      lcd.setCursor(0,0);
+      lcd.print("Conf: Brillo   ");
+       
+      printBrillo();
+      unsigned long starting=millis();
+    
+     while  (!exitmenu){
+      
+        do
+        {
+             buttonPressed=waitButton();
+        } while(!(buttonPressed==KEYPAD_SELECT || buttonPressed==KEYPAD_UP || buttonPressed==KEYPAD_DOWN  ) && !exitmenu);
+        
+        if (!exitmenu) {
+              exitmenu=waitReleaseButton(buttonPressed,buttonProcessBrillo,printBrillo);
+        }
+       //buttonPressed=lcd.button();  //I splitted button reading and navigation in two procedures because 
+      }
+ 
+  exitmenu=false;
+  }
+  
 boolean waitReleaseButton(int lastButtonPressed,bool (*funcion_procesar_boton)(int),void (*funcion_print)())
 { int b=lastButtonPressed;
   boolean salir=false;
@@ -483,10 +511,6 @@ boolean waitReleaseButton(int lastButtonPressed,bool (*funcion_procesar_boton)(i
   do {
    
    
-   // Increase the time model by one second
-   //incTime();
-        
-          // Print the time on the LCD
    funcion_print();
    salir=funcion_procesar_boton(b);
    delay(200);
@@ -579,6 +603,43 @@ boolean buttonProcessTime(int b) {
     minutes %= 60;
     seconds %= 60;
     printTime();
+    return false;
+
+}
+
+
+boolean buttonProcessBrillo(int b) {
+  // Read the buttons five times in a second
+  
+
+    // Read the buttons value
+   
+    switch (b) {
+
+    // Up button was pushed
+    case KEYPAD_UP:
+        brillo++;
+        configuration.contrast_active+= 12;
+        activarPantalla();
+        break;
+
+    // Down button was pushed
+    case KEYPAD_DOWN:
+      brillo--;
+      if (brillo==-1) brillo=20;
+      configuration.contrast_active-= 12;
+      activarPantalla();
+      break;
+
+      case KEYPAD_SELECT:
+        //seteo la hora
+        EEPROM_writeAnything(0, configuration);
+        return true;
+        
+    }
+    activarPantalla();
+    brillo %= 20;
+    printBrillo();
     return false;
 
 }
@@ -789,6 +850,14 @@ void printDate() {
   char time[17];
   sprintf(time, "%02u/%02u/%04u", day, month, year);
   lcd.print(time);
+}
+
+void printBrillo() {
+  // Set the cursor at the begining of the second row
+  lcd.setCursor(5,1);
+  char cbrillo[17];
+  sprintf(cbrillo, "%02u", brillo);
+  lcd.print(cbrillo);
 }
 
 
