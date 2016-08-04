@@ -621,8 +621,8 @@ boolean buttonProcessBrillo(int b) {
     case KEYPAD_UP:
         brillo++;
         if (brillo==21) {
-          brillo=0;
-          configuration.contrast_active=0;
+          brillo=1;
+          configuration.contrast_active=12;
           } else {
           configuration.contrast_active+= 12;
           }
@@ -632,7 +632,7 @@ boolean buttonProcessBrillo(int b) {
     // Down button was pushed
     case KEYPAD_DOWN:
       brillo--;
-      if (brillo==-1) {
+      if (brillo==0) {
           brillo=20;
           configuration.contrast_active=12*20;
         } else {
