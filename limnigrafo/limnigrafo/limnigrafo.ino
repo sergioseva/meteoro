@@ -14,7 +14,11 @@
 #define MONTH 1
 #define DAY 0
 #define SALIR 3
-
+#define LCD_Backlight 10 // 15. BL1 - Backlight + 
+#define PANTALLA_ACTIVA 0
+#define PANTALLA_STBY 1
+const float minutos_stby=10;
+int brillo=0;
 // The time model
 unsigned int year = 0;
 unsigned int month = 0;
@@ -25,6 +29,7 @@ unsigned int seconds = 0;
 unsigned int settingTime = 0;
 unsigned int settingDate = 0;
 boolean exitmenu=false;
+unsigned int estado_pantalla = PANTALLA_ACTIVA;
 
 byte enie[8] = {
     B01001,
@@ -63,6 +68,8 @@ struct config_t
     float medicion;
     int minutos_logueo;
     bool memoria;
+	byte contrast_stby;
+    byte contrast_active;
 } configuration;
 
 
@@ -77,6 +84,7 @@ const int chipSelect = 53;
 //variables para el periodo de grabacion en la SD
 long intervalo;
 unsigned long previousMillis = 0;
+unsigned long millisPantalla=0;
 
 //variables para el encoder
 const int encoderPinA=18;                   // Used for generating interrupts using CLK signal
@@ -172,22 +180,20 @@ void menuUsed(MenuUseEvent used){
   } else if  (smenu.indexOf("Expulsar")!=-1){
     Serial.println("Expulsar");
     expulsarMemoria();
-    
-  //  resetAcumuladoMensual();
   }
   else if (smenu.indexOf("Insertar")!=-1){
     Serial.println("Insertar");
     insertarMemoria();  
-  //  resetAcumuladoTodo();
+  }
+  else if (smenu.indexOf("Brillo")!=-1){
+    Serial.println("Brillo");
+    configurarBrillo();  
   }
 
-//  lcd.setCursor(0,0);  
-//  lcd.print("Menu            ");
-//  lcd.setCursor(0,1);
-//  lcd.print(smenu);
   exitmenu=true;
   lcd.clear();
-//  menu.toRoot();  //back to Main
+  activarPantalla();
+
 }
 
  
@@ -197,11 +203,12 @@ MenuBackend menu = MenuBackend(menuUsed,menuChanged);
     MenuItem menu1Item1 = MenuItem("Cambiar Fecha   ");
     MenuItem menu1Item2 = MenuItem("Cambiar Hora    ");      
     MenuItem menu1Item3 = MenuItem("Reset nivel       ");
-    MenuItem menu1Item4 = MenuItem("Memoria...        ");
-    MenuItem menuItem4SubItem1 = MenuItem("Expulsar        ");
-    MenuItem menuItem4SubItem2 = MenuItem("Insertar       ");
-    MenuItem menuItem4SubItem3 = MenuItem("Subir           ");
-    MenuItem menu1Item5 = MenuItem("Salir           ");
+	MenuItem menu1Item4 = MenuItem("Salir Brillo          ");
+    MenuItem menu1Item5 = MenuItem("Memoria...        ");
+    MenuItem menuItem5SubItem1 = MenuItem("Insertar        ");
+    MenuItem menuItem5SubItem2 = MenuItem("Expulsar        ");
+    MenuItem menuItem5SubItem3 = MenuItem("Menu anterior   ");
+    MenuItem menu1Item6 = MenuItem("Salir           ");
 
 void resetNivel(){
   medicion=0;
@@ -256,7 +263,9 @@ void setup() {
 		  configuration.deflt=0;
 		  configuration.medicion=0;
 		  configuration.minutos_logueo=10;
-      configuration.memoria=true;
+          configuration.memoria=true;
+		  configuration.contrast_stby=0;
+          configuration.contrast_active=128;
 		  EEPROM_writeAnything(0, configuration);
 	  }
    else {
@@ -265,6 +274,12 @@ void setup() {
     virtualPosition=medicion;
     Serial.print("medicion en setup:");
     Serial.println(medicion);
+	brillo=configuration.contrast_active/12;
+	//prevengo que la pantalla arranque apagada
+	if (brillo==0){
+		brillo=10;
+		configuration.contrast_active=12*10;
+		}
     }
     //intervalo de grabacion en la micro sd en milisegundos
     intervalo = configuration.minutos_logueo*60*1000;
@@ -275,9 +290,9 @@ void setup() {
 
     //configure menu
   menu.getRoot().add(menu1Item1);
-  menu1Item1.addRight(menu1Item2).addRight(menu1Item3).addRight(menu1Item4).addRight(menu1Item5);
-  menu1Item4.addAfter(menuItem4SubItem3);//para que al elegir subir vaya al submenu
-  menu1Item4.add(menuItem4SubItem1).addRight(menuItem4SubItem2).addRight(menuItem4SubItem3);
+  menu1Item1.addRight(menu1Item2).addRight(menu1Item3).addRight(menu1Item4).addRight(menu1Item5).addRight(menu1Item6);
+  menu1Item5.addAfter(menuItem5SubItem3);//para que al elegir subir vaya al submenu
+  menu1Item5.add(menuItem5SubItem1).addRight(menuItem5SubItem2).addRight(menuItem5SubItem3);
   
   menu.toRoot();
 
@@ -288,10 +303,17 @@ lcd.createChar(2, down);
 //pantalla
     lcd.begin(16, 2);
     lcd.clear();
+	pinMode(LCD_Backlight, OUTPUT); 
+    activarPantalla();
 }
 
 void procesarMenu(){
   int buttonPressed=lcd.button();
+  if (estado_pantalla==PANTALLA_STBY && buttonPressed!=KEYPAD_NONE) {
+		activarPantalla();
+		waitReleaseButton();
+		return;
+  }
   if (buttonPressed==KEYPAD_SELECT){
     waitReleaseButton();
     lcd.setCursor(0,0);  
@@ -313,7 +335,7 @@ void procesarMenu(){
     buttonPressed=KEYPAD_NONE;  
     }
   buttonPressed=KEYPAD_NONE;  
-  
+  activarPantalla();	
 }
   
 }
@@ -322,7 +344,7 @@ void loop() {
 	
 	   rotating = true;  // reset the debouncer
      String datestring;
-    
+     controlarContraste();
      leerHoraYTemp();
      leerMedicion();
      mostrarDatos(true);  // Escribimos el valor en pantalla
@@ -343,6 +365,21 @@ void waitReleaseButton()
   delay(50);
 }
 
+void controlarContraste(){
+   unsigned long current;
+   current=millis();
+   if ((current-millisPantalla)>(minutos_stby*60*1000)) {
+    analogWrite(LCD_Backlight, configuration.contrast_stby);  
+  	estado_pantalla = PANTALLA_STBY;    
+    }
+}
+
+
+void activarPantalla(){
+    analogWrite(LCD_Backlight, configuration.contrast_active);  
+  	estado_pantalla = PANTALLA_ACTIVA;   
+	  millisPantalla=millis();
+}
 
 
 int waitButton()
@@ -365,6 +402,61 @@ int waitButton()
 }
 
 
+boolean buttonProcessBrillo(int b) {
+  // Read the buttons five times in a second
+  
+
+    // Read the buttons value
+   
+    switch (b) {
+
+    // Up button was pushed
+    case KEYPAD_UP:
+        brillo++;
+        if (brillo==21) {
+          brillo=1;
+          configuration.contrast_active=12;
+          } else {
+          configuration.contrast_active+= 12;
+          } 
+        activarPantalla();
+        break;
+
+    // Down button was pushed
+    case KEYPAD_DOWN:
+      brillo--;
+      if (brillo==0) {
+          brillo=20;
+          configuration.contrast_active=12*20;
+        } else {
+          configuration.contrast_active-= 12;
+        }      
+      activarPantalla();
+      break;
+
+      case KEYPAD_SELECT:
+        //seteo la hora
+        EEPROM_writeAnything(0, configuration);
+        return true;
+        
+    }
+    activarPantalla();
+    printBrillo();
+    return false;
+
+}
+
+
+
+void printBrillo() {
+  // Set the cursor at the begining of the second row
+  lcd.setCursor(5,1);
+  char cbrillo[17];
+  sprintf(cbrillo, "%02u", brillo);
+  lcd.print(cbrillo);
+}
+
+
 
 
 void navigateMenus(int b) {
@@ -373,9 +465,9 @@ void navigateMenus(int b) {
   Serial.println(b);
   switch (b){
     case KEYPAD_SELECT:
-      if(!(currentMenu.moveDown() || currentMenu.getName()=="Subir           ")){  //if the current menu has a child and has been pressed enter then menu navigate to item below
+      if(!(currentMenu.moveDown() || currentMenu.getName()=="Menu anterior   ")){  //if the current menu has a child and has been pressed enter then menu navigate to item below
         menu.use();
-      }else if (currentMenu.getName()=="Subir           ") {
+      }else if (currentMenu.getName()=="Menu anterior   ") {
         menu.moveUp();
          Serial.print("moveUp");
         }      
@@ -428,6 +520,32 @@ void setearHora (){
  
   exitmenu=false;
   }
+  
+void configurarBrillo (){
+    int buttonPressed;
+      boolean salir=false;
+      lcd.setCursor(0,0);
+      lcd.print("Conf: Brillo   ");
+       
+      printBrillo();
+      unsigned long starting=millis();
+    
+     while  (!exitmenu){
+      
+        do
+        {
+             buttonPressed=waitButton();
+        } while(!(buttonPressed==KEYPAD_SELECT || buttonPressed==KEYPAD_UP || buttonPressed==KEYPAD_DOWN  ) && !exitmenu);
+        
+        if (!exitmenu) {
+              exitmenu=waitReleaseButton(buttonPressed,buttonProcessBrillo,printBrillo);
+        }
+       //buttonPressed=lcd.button();  //I splitted button reading and navigation in two procedures because 
+      }
+ 
+  exitmenu=false;
+  }
+  
 
 
 boolean waitReleaseButton(int lastButtonPressed,bool (*funcion_procesar_boton)(int),void (*funcion_print)())
@@ -959,4 +1077,4 @@ void initSDcard(){
    } else
       {Serial.println("card initialized.");
       error_memoria=false;}     
-  }
+  s}
