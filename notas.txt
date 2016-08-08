@@ -6,3 +6,5 @@ http://forum.arduino.cc/index.php?topic=165170.0
 
 g do clk di cs +
   50  52 51 53
+  
+http://www.hobbytronics.co.uk/arduino-float-vars
