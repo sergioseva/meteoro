@@ -76,6 +76,8 @@ struct config_t
 RtcDS3231 Rtc;
 RtcDateTime now;
 float medicion=0;
+String smedicion;
+String smedicion_ant;
 String  unidades= "mts";
 LCDKeypad lcd;
 //LiquidCrystal lcd(8,9,4,5,6,7); 
@@ -305,6 +307,8 @@ lcd.createChar(2, down);
     lcd.clear();
 	pinMode(LCD_Backlight, OUTPUT); 
     activarPantalla();
+smedicion=String(medicion);
+smedicion_ant=String(medicion);
 }
 
 void procesarMenu(){
@@ -937,8 +941,7 @@ void mostrarDatos(boolean serial)
   
 
   String s = String(medicion);
-  String svp =String(virtualPosition);
-  
+ 
   lcd.setCursor(0,0);
   lcd.print(datestring);
   lcd.setCursor(5,1);
@@ -947,11 +950,13 @@ void mostrarDatos(boolean serial)
   //muestro la medicion     
    if (virtualPosition != medicion) {
         medicion = virtualPosition;
+        smedicion=String(medicion);
         Serial.print("Medicion:");
-        Serial.println(medicion);
-        Serial.print("Virtual position:");
-        Serial.println(virtualPosition);
-      if (s!=svp){
+        Serial.println(smedicion);
+        Serial.print("Medicion anterior:");
+        Serial.println(smedicion_ant);
+      if (smedicion!=smedicion_ant){
+            smedicion_ant=smedicion;
       		  //cambio el valor de medicion, entonces escribo en la memoria
       		  initSDcard();
             if (!error_memoria) {
@@ -961,7 +966,7 @@ void mostrarDatos(boolean serial)
             		if (dataFile) {
                   lcd.setCursor(14,1);
                   lcd.print("  ");
-            			dataFile.println(datestring + "," + s + " " + unidades);
+            			dataFile.println(datestring + "," + smedicion + " " + unidades);
             			dataFile.close();
                   Serial.println("Escribi en memoria");
                     }
@@ -975,8 +980,6 @@ void mostrarDatos(boolean serial)
 		int c=EEPROM_writeAnything(0, configuration);
    	Serial.print("escribi medicion "); 
     Serial.print(configuration.medicion) ;
-    Serial.print(" cantidad "); 
-    Serial.print(c); 
     Serial.println();
   }	
     
