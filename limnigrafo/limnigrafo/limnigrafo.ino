@@ -203,7 +203,7 @@ MenuBackend menu = MenuBackend(menuUsed,menuChanged);
     MenuItem menu1Item1 = MenuItem("Cambiar Fecha   ");
     MenuItem menu1Item2 = MenuItem("Cambiar Hora    ");      
     MenuItem menu1Item3 = MenuItem("Reset nivel       ");
-	MenuItem menu1Item4 = MenuItem("Salir Brillo          ");
+	MenuItem menu1Item4 = MenuItem("Brillo          ");
     MenuItem menu1Item5 = MenuItem("Memoria...        ");
     MenuItem menuItem5SubItem1 = MenuItem("Insertar        ");
     MenuItem menuItem5SubItem2 = MenuItem("Expulsar        ");
@@ -869,7 +869,7 @@ configuration.memoria=true;
   lcd.print("Verificando     ");
   lcd.setCursor(0,1);
   lcd.print("memoria         "); 
-initSDcard();
+  initSDcard();
      if (!error_memoria) {
           lcd.setCursor(0,0);  
           lcd.print("Memoria ok      ");
@@ -934,39 +934,42 @@ void mostrarDatos(boolean serial)
   
   //muestro fecha y hora
   String datestring=formatDateTime(now);
-  //if (serial)
-	   // Serial.print(datestring);
-	    
-  //lcd.clear();
+  
+
   String s = String(medicion);
+  String svp =String(virtualPosition);
+  
   lcd.setCursor(0,0);
   lcd.print(datestring);
   lcd.setCursor(5,1);
   lcd.print(s + " " + unidades);
-  
+        
   //muestro la medicion     
    if (virtualPosition != medicion) {
         medicion = virtualPosition;
-		Serial.print("Count:");
+        Serial.print("Medicion:");
         Serial.println(medicion);
-  
-		//cambio el valor de medicion, entonces escribo en la memoria
-		File dataFile = SD.open("limni.csv", FILE_WRITE);
-    
-		// if the file is available, write to it:
-		if (dataFile) {
-      lcd.setCursor(14,1);
-      lcd.print("  ");
-			dataFile.println(datestring + "," + s + " " + unidades);
-			dataFile.close();
-      Serial.println("Escribi en memoria");
-        }  
-      // if the file isn't open, pop up an error:
-		else {
-			Serial.println("error opening limni. trying to init sd card");
-      initSDcard();
-      }
-
+        Serial.print("Virtual position:");
+        Serial.println(virtualPosition);
+      if (s!=svp){
+      		  //cambio el valor de medicion, entonces escribo en la memoria
+      		  initSDcard();
+            if (!error_memoria) {
+      		       File dataFile = SD.open("limni.csv", FILE_WRITE);
+          
+            		// if the file is available, write to it:
+            		if (dataFile) {
+                  lcd.setCursor(14,1);
+                  lcd.print("  ");
+            			dataFile.println(datestring + "," + s + " " + unidades);
+            			dataFile.close();
+                  Serial.println("Escribi en memoria");
+                    }
+                else{
+                  error_memoria=true;
+                  }  
+            }   
+     }
 		//escribimos en la eeprom para no perder el valor si el dispositivo se apaga
 		configuration.medicion=medicion;
 		int c=EEPROM_writeAnything(0, configuration);
@@ -976,7 +979,6 @@ void mostrarDatos(boolean serial)
     Serial.print(c); 
     Serial.println();
   }	
-  
     
   
 }
@@ -1077,4 +1079,4 @@ void initSDcard(){
    } else
       {Serial.println("card initialized.");
       error_memoria=false;}     
-  s}
+  }

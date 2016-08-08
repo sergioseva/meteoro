@@ -1000,20 +1000,22 @@ void mostrarDatos(boolean serial)
      //tuve que hacer la comparacion convirtiendo a string porque no daba igual aunque sea 2.00=2
     if ((String(medicion)==String(med_int)+".00") and configuration.memoria) {
       //cambio el valor de medicion, entonces escribo en la memoria
-      File dataFile = SD.open("pluvio.csv", FILE_WRITE);
-      Serial.print("Escribo en SD ");  
-      // if the file is available, write to it:
-      if (dataFile) {
-          error_memoria=false;
-          s = String(medicion);
-          dataFile.println(datestring + "," + s + " " + unidades);
-          dataFile.close();
-      }  
-      // if the file isn't open, pop up an error:
-      else {
-        Serial.println("error opening pluvio.csv trying to init sd card");
-        initSDcard(); 
-      }
+
+       initSDcard();
+       if (!error_memoria) {
+          File dataFile = SD.open("pluvio.csv", FILE_WRITE);
+          Serial.print("Escribo en SD ");  
+          // if the file is available, write to it:
+          if (dataFile) {
+              error_memoria=false;
+              s = String(medicion);
+              dataFile.println(datestring + "," + s + " " + unidades);
+              dataFile.close();
+          }  
+          // if the file isn't open, pop up an error:
+          else {
+            error_memoria=true; 
+          }
     }
 
     //escribimos en la eeprom para no perder el valor si el dispositivo se apaga
@@ -1041,7 +1043,7 @@ void mostrarDatos(boolean serial)
 
 }
 
-
+}
 
 
 String formatDateTime(const RtcDateTime& dt)
